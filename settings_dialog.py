@@ -3,12 +3,14 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt, pyqtSignal
 import json
 import os
-from styles import SETTINGS_DIALOG_STYLE
-from updater import Updater
-from version import VERSION
 import sys
 import subprocess
 import shutil
+from styles import SETTINGS_DIALOG_STYLE
+from updater import Updater
+from version import VERSION
+from app_paths import get_app_root, validate_app_path, get_temp_dir, get_backup_dir
+import app_paths
 
 class SettingsDialog(QDialog):
     settings_changed = pyqtSignal(dict)  # Сигнал для уведомления об изменении настроек
@@ -159,30 +161,50 @@ class SettingsDialog(QDialog):
     
     def download_update(self, download_url):
         """Загрузка обновления"""
-        self.progress_bar.show()
-        self.progress_bar.setValue(0)
-        
-        # Создаем временную директорию для загрузки
-        temp_dir = os.path.join(os.path.dirname(sys.executable), 'temp')
-        os.makedirs(temp_dir, exist_ok=True)
-        save_path = os.path.join(temp_dir, 'update.zip')
-        
-        if self.updater.download_update(download_url, save_path):
-            self.install_update(save_path)
+        try:
+            self.progress_bar.show()
+            self.progress_bar.setValue(0)
+            
+            # Определяем корневой путь приложения
+            app_root = app_paths.get_app_root()
+            print(f"[DEBUG] App root path: {app_root}")
+            
+            # Создаем временную директорию внутри корневого пути
+            temp_dir = os.path.join(app_root, 'python', 'temp')
+            os.makedirs(temp_dir, exist_ok=True)
+            save_path = os.path.join(temp_dir, 'update.zip')
+            
+            print(f"[DEBUG] Using temp directory: {temp_dir}")
+            print(f"[DEBUG] Update will be saved to: {save_path}")
+            
+            if self.updater.download_update(download_url, save_path):
+                self.install_update(save_path)
+        except Exception as e:
+            error_msg = f"Ошибка при подготовке к загрузке обновления: {str(e)}"
+            print(f"[ERROR] {error_msg}")
+            self.on_update_error(error_msg)
     
     def install_update(self, update_file):
         """Установка обновления"""
         try:
-            # Создаем bat-файл для обновления
-            update_script = os.path.join(os.path.dirname(update_file), 'update.bat')
-            ps_script = os.path.join(os.path.dirname(update_file), 'update.ps1')
-            app_path = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))  # Путь к корневой папке приложения
-            temp_extract_dir = os.path.join(os.path.dirname(update_file), 'temp_extract')
+            # Определяем корневой путь приложения
+            app_root = app_paths.get_app_root()
+            print(f"[DEBUG] App root path: {app_root}")
+            
+            # Создаем пути для скриптов обновления
+            scripts_dir = os.path.dirname(update_file)
+            update_script = os.path.join(scripts_dir, 'update.bat')
+            ps_script = os.path.join(scripts_dir, 'update.ps1')
+            
+            # Создаем пути для временных файлов и бэкапа
+            temp_extract_dir = os.path.join(scripts_dir, 'temp_extract')
+            backup_dir = os.path.join(scripts_dir, f'backup_{os.path.basename(update_file)}')
             
             print(f"[DEBUG] Update file path: {update_file}")
-            print(f"[DEBUG] App path: {app_path}")
+            print(f"[DEBUG] App path: {app_root}")
             print(f"[DEBUG] Python executable: {sys.executable}")
             print(f"[DEBUG] Temp extract dir: {temp_extract_dir}")
+            print(f"[DEBUG] Backup dir: {backup_dir}")
             
             # Проверяем существование файла обновления
             if not os.path.exists(update_file):
@@ -195,18 +217,19 @@ class SettingsDialog(QDialog):
             
             # Проверяем права доступа к папке приложения
             try:
-                test_file = os.path.join(app_path, 'test_write_access')
+                test_file = os.path.join(app_root, 'test_write_access')
                 with open(test_file, 'w') as f:
                     f.write('test')
                 os.remove(test_file)
             except Exception as e:
-                raise PermissionError(f"Нет прав на запись в папку приложения: {app_path}. Запустите приложение от имени администратора.")
+                raise PermissionError(f"Нет прав на запись в папку приложения: {app_root}. Запустите приложение от имени администратора.")
             
-            # Подготавливаем пути для PowerShell (используем прямые слеши для PowerShell)
-            ps_update_file = update_file.replace('\\', '/')
+            # Подготавливаем пути для PowerShell (используем прямые слеши)
+            ps_update_file = os.path.abspath(update_file).replace('\\', '/')
             ps_temp_dir = temp_extract_dir.replace('\\', '/')
-            ps_app_path = app_path.replace('\\', '/')
-            ps_launcher = os.path.join(app_path, "start_app.bat").replace('\\', '/')
+            ps_app_path = app_root.replace('\\', '/')
+            ps_backup_dir = backup_dir.replace('\\', '/')
+            ps_launcher = os.path.join(app_root, "launcher.bat").replace('\\', '/')
             
             # Создаем PowerShell скрипт
             with open(ps_script, 'w', encoding='utf-8') as f:
@@ -217,23 +240,31 @@ class SettingsDialog(QDialog):
                 f.write(f'    $updateFile = "{ps_update_file}"\n')
                 f.write(f'    $tempDir = "{ps_temp_dir}"\n')
                 f.write(f'    $appPath = "{ps_app_path}"\n')
+                f.write(f'    $backupDir = "{ps_backup_dir}"\n')
                 f.write('\n')
                 f.write('    Write-Host "Checking paths..."\n')
                 f.write('    Write-Host "Update file: $updateFile"\n')
                 f.write('    Write-Host "Temp directory: $tempDir"\n')
                 f.write('    Write-Host "Application path: $appPath"\n')
+                f.write('    Write-Host "Backup directory: $backupDir"\n')
+                f.write('\n')
+                f.write('    # Проверка безопасности пути\n')
+                f.write('    if ($appPath -eq "C:/" -or $appPath -eq "C:\\" -or $appPath.Length -lt 4) {\n')
+                f.write('        throw "Invalid application path. Update stopped for security reasons."\n')
+                f.write('    }\n')
+                f.write('\n')
+                f.write('    Write-Host "Creating backup..."\n')
+                f.write('    if (Test-Path $backupDir) { Remove-Item $backupDir -Recurse -Force }\n')
+                f.write('    Copy-Item -Path $appPath -Destination $backupDir -Recurse\n')
                 f.write('\n')
                 f.write('    Write-Host "Checking update file..."\n')
                 f.write('    if (-not (Test-Path $updateFile)) { throw "Update file not found" }\n')
                 f.write('\n')
                 f.write('    Write-Host "Preparing temp directory..."\n')
-                f.write('    if (Test-Path $tempDir) {\n')
-                f.write('        Write-Host "Cleaning existing temp directory..."\n')
-                f.write('        Remove-Item $tempDir -Recurse -Force\n')
-                f.write('    }\n')
+                f.write('    if (Test-Path $tempDir) { Remove-Item $tempDir -Recurse -Force }\n')
                 f.write('    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null\n')
                 f.write('\n')
-                f.write('    Write-Host "Extracting to temp directory: $tempDir"\n')
+                f.write('    Write-Host "Extracting update..."\n')
                 f.write('    Add-Type -AssemblyName System.IO.Compression.FileSystem\n')
                 f.write('    try {\n')
                 f.write('        [System.IO.Compression.ZipFile]::ExtractToDirectory($updateFile, $tempDir)\n')
@@ -244,52 +275,53 @@ class SettingsDialog(QDialog):
                 f.write('    Write-Host "Verifying extracted files..."\n')
                 f.write('    if (-not (Test-Path "$tempDir/*")) { throw "No files found in extracted directory" }\n')
                 f.write('\n')
-                f.write('    Write-Host "Copying files to: $appPath"\n')
-                f.write('    # Получаем список всех файлов для обновления\n')
-                f.write('    $filesToUpdate = Get-ChildItem -Path $tempDir -Recurse | Where-Object { -not $_.PSIsContainer }\n')
+                f.write('    Write-Host "Updating files..."\n')
+                f.write('    $filesToUpdate = Get-ChildItem -Path $tempDir -Recurse -File\n')
                 f.write('\n')
-                f.write('    if ($filesToUpdate.Count -eq 0) { throw "No files found to update" }\n')
-                f.write('\n')
-                f.write('    # Сначала удаляем все старые файлы\n')
-                f.write('    Write-Host "Removing old files..."\n')
+                f.write('    $success = $true\n')
                 f.write('    foreach ($file in $filesToUpdate) {\n')
-                f.write('        $relativePath = $file.FullName.Substring($tempDir.Length + 1)\n')
-                f.write('        if ([string]::IsNullOrEmpty($relativePath)) { continue }\n')
-                f.write('        $targetPath = Join-Path $appPath $relativePath\n')
-                f.write('        if (Test-Path $targetPath) {\n')
-                f.write('            Write-Host "Removing: $relativePath"\n')
-                f.write('            Remove-Item -Path $targetPath -Force\n')
+                f.write('        try {\n')
+                f.write('            $relativePath = $file.FullName.Substring($tempDir.Length + 1)\n')
+                f.write('            $targetPath = Join-Path -Path $appPath -ChildPath $relativePath\n')
+                f.write('            $targetDir = Split-Path -Parent $targetPath\n')
+                f.write('\n')
+                f.write('            if (-not [string]::IsNullOrEmpty($targetDir)) {\n')
+                f.write('                if (-not (Test-Path $targetDir)) {\n')
+                f.write('                    New-Item -ItemType Directory -Path $targetDir -Force | Out-Null\n')
+                f.write('                }\n')
+                f.write('            }\n')
+                f.write('\n')
+                f.write('            if (Test-Path $targetPath) {\n')
+                f.write('                Write-Host "Removing: $relativePath"\n')
+                f.write('                Remove-Item -Path $targetPath -Force\n')
+                f.write('            }\n')
+                f.write('\n')
+                f.write('            Write-Host "Copying: $relativePath"\n')
+                f.write('            Copy-Item -Path $file.FullName -Destination $targetPath -Force\n')
+                f.write('        } catch {\n')
+                f.write('            $success = $false\n')
+                f.write('            Write-Host "Failed to copy file $relativePath : $($_.Exception.Message)" -ForegroundColor Red\n')
+                f.write('            break\n')
                 f.write('        }\n')
                 f.write('    }\n')
                 f.write('\n')
-                f.write('    # Теперь копируем новые файлы\n')
-                f.write('    Write-Host "Copying new files..."\n')
-                f.write('    foreach ($file in $filesToUpdate) {\n')
-                f.write('        $relativePath = $file.FullName.Substring($tempDir.Length + 1)\n')
-                f.write('        if ([string]::IsNullOrEmpty($relativePath)) { continue }\n')
-                f.write('        $targetPath = Join-Path $appPath $relativePath\n')
-                f.write('        $targetDir = Split-Path -Parent $targetPath\n')
-                f.write('\n')
-                f.write('        # Создаем директорию, если её нет\n')
-                f.write('        if (-not [string]::IsNullOrEmpty($targetDir)) {\n')
-                f.write('            if (-not (Test-Path $targetDir)) {\n')
-                f.write('                New-Item -ItemType Directory -Path $targetDir -Force | Out-Null\n')
-                f.write('            }\n')
-                f.write('        }\n')
-                f.write('\n')
-                f.write('        Write-Host "Copying: $relativePath"\n')
-                f.write('        Copy-Item -Path $file.FullName -Destination $targetPath -Force\n')
+                f.write('    if (-not $success) {\n')
+                f.write('        Write-Host "Update failed, restoring backup..." -ForegroundColor Yellow\n')
+                f.write('        Remove-Item -Path "$appPath/*" -Recurse -Force\n')
+                f.write('        Copy-Item -Path "$backupDir/*" -Destination $appPath -Recurse -Force\n')
+                f.write('        throw "Update failed, backup restored"\n')
                 f.write('    }\n')
                 f.write('\n')
                 f.write('    Write-Host "Cleaning up..."\n')
                 f.write('    Remove-Item $updateFile -Force\n')
                 f.write('    Remove-Item $tempDir -Recurse -Force\n')
+                f.write('    Remove-Item $backupDir -Recurse -Force\n')
                 f.write('\n')
                 f.write('    Write-Host "Update completed successfully!"\n')
-                f.write('    Write-Host "Verifying start_app.bat exists..."\n')
-                f.write(f'    if (-not (Test-Path "{ps_launcher}")) {{ throw "start_app.bat not found after update" }}\n')
+                f.write('    Write-Host "Verifying launcher.bat exists..."\n')
+                f.write(f'    if (-not (Test-Path "{ps_launcher}")) {{ throw "launcher.bat not found after update" }}\n')
                 f.write('    Write-Host "Starting application..."\n')
-                f.write(f'    Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "cd /d \\"$appPath\\" && start_app.bat"\n')
+                f.write(f'    Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "cd /d \\"$appPath\\" && launcher.bat"\n')
                 f.write('} catch {\n')
                 f.write('    Write-Host ("Update failed: " + $_.Exception.Message) -ForegroundColor Red\n')
                 f.write('    Write-Host ("Stack trace: " + $_.ScriptStackTrace) -ForegroundColor Red\n')
@@ -297,8 +329,6 @@ class SettingsDialog(QDialog):
                 f.write('    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")\n')
                 f.write('    exit 1\n')
                 f.write('}\n')
-            
-            print(f"[DEBUG] Created update scripts: {update_script}, {ps_script}")
             
             # Создаем BAT файл
             with open(update_script, 'w', encoding='utf-8') as f:
@@ -318,6 +348,8 @@ class SettingsDialog(QDialog):
                 f.write('    del "%~f0"\n')
                 f.write(f'    del "{ps_script}"\n')
                 f.write(')\n')
+            
+            print(f"[DEBUG] Created update scripts: {update_script}, {ps_script}")
             
             # Запускаем скрипт обновления и закрываем приложение
             subprocess.Popen([update_script], shell=True)

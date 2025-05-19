@@ -3,6 +3,10 @@ import sys
 import json
 import zipfile
 import requests
+import subprocess
+import re
+from datetime import datetime
+from typing import List, Dict, Tuple
 from version import VERSION
 import time
 
@@ -14,6 +18,191 @@ class ReleaseManager:
         self.max_retries = 3
         self.timeout = 30
         
+        # Загружаем текущую версию
+        with open('version.py', 'r', encoding='utf-8') as f:
+            version_content = f.read()
+            self.current_version = re.search(r'VERSION\s*=\s*["\'](.+?)["\']', version_content).group(1)
+    
+    def increment_version(self) -> str:
+        """Увеличивает номер версии"""
+        try:
+            major, minor, patch = map(int, self.current_version.split('.'))
+            patch += 1
+            new_version = f"{major}.{minor}.{patch}"
+            
+            # Обновляем файл version.py
+            with open('version.py', 'w', encoding='utf-8') as f:
+                f.write(f'VERSION = "{new_version}"\n')
+            
+            print(f"Версия обновлена: {self.current_version} -> {new_version}")
+            return new_version
+        except Exception as e:
+            raise ValueError(f"Ошибка при обновлении версии: {str(e)}")
+    
+    def get_changed_files(self) -> List[str]:
+        """Получает список измененных файлов из Git"""
+        try:
+            # Получаем список измененных файлов
+            result = subprocess.run(
+                ['git', 'status', '--porcelain'],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            changed_files = []
+            for line in result.stdout.splitlines():
+                status = line[:2]
+                file_path = line[3:].strip()
+                
+                # Пропускаем файлы, которые не должны быть в релизе
+                if any(file_path.endswith(ext) for ext in ['.pyc', '.log', '.tmp']):
+                    continue
+                if any(name in file_path for name in ['__pycache__', '.git', 'temp']):
+                    continue
+                
+                if status in ['M ', 'A ', '?? ']:  # Modified, Added, Untracked
+                    changed_files.append(file_path)
+            
+            return changed_files
+        except subprocess.CalledProcessError as e:
+            raise ValueError(f"Ошибка при получении списка измененных файлов: {str(e)}")
+    
+    def commit_and_push(self, version: str, changed_files: List[str]):
+        """Создает коммит и отправляет изменения в репозиторий"""
+        try:
+            # Добавляем измененные файлы
+            subprocess.run(['git', 'add', *changed_files, 'version.py'], check=True)
+            
+            # Создаем коммит
+            commit_message = f"Release version {version}\n\nChanged files:\n" + "\n".join(f"- {f}" for f in changed_files)
+            subprocess.run(['git', 'commit', '-m', commit_message], check=True)
+            
+            # Создаем тег версии
+            subprocess.run(['git', 'tag', f'v{version}'], check=True)
+            
+            # Отправляем изменения и тег
+            subprocess.run(['git', 'push'], check=True)
+            subprocess.run(['git', 'push', '--tags'], check=True)
+            
+            print("Изменения успешно отправлены в репозиторий")
+        except subprocess.CalledProcessError as e:
+            raise ValueError(f"Ошибка при работе с Git: {str(e)}")
+    
+    def create_release_archive(self, changed_files: List[str]) -> str:
+        """Создание ZIP архива только с измененными файлами"""
+        zip_path = f"BProjectManager-{self.current_version}.zip"
+        
+        try:
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for file_path in changed_files:
+                    if os.path.exists(file_path):
+                        print(f"Добавление файла: {file_path}")
+                        zf.write(file_path)
+                    else:
+                        print(f"ВНИМАНИЕ: Файл не найден: {file_path}")
+                
+                # Всегда добавляем version.py
+                zf.write('version.py')
+            
+            if not os.path.getsize(zip_path):
+                raise FileNotFoundError("Не удалось создать архив: все файлы отсутствуют")
+            
+            return zip_path
+        except Exception as e:
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
+            raise ValueError(f"Ошибка при создании архива: {str(e)}")
+    
+    def generate_release_notes(self, changed_files: List[str]) -> str:
+        """Генерация описания релиза"""
+        return f"""# BProjectManager {self.current_version}
+
+## Изменения в этой версии:
+{self._format_changes(changed_files)}
+
+## Измененные файлы:
+{self._format_files(changed_files)}
+
+## Информация об обновлении
+- Дата релиза: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- Тип обновления: Частичное (только измененные файлы)
+- Размер обновления: {self._get_update_size(changed_files)}
+
+## Установка
+1. Приложение автоматически загрузит и установит обновление
+2. В случае проблем, скачайте архив BProjectManager-{self.current_version}.zip
+3. Распакуйте архив, заменив существующие файлы
+
+## Системные требования
+- Windows 10 или выше
+- Доступ к интернету для обновлений
+"""
+    
+    def _format_changes(self, files: List[str]) -> str:
+        """Форматирует список изменений по категориям"""
+        categories = {
+            'core': [],      # Основные файлы
+            'ui': [],        # Файлы интерфейса
+            'plugins': [],   # Плагины
+            'other': []      # Прочее
+        }
+        
+        for file in files:
+            if file.endswith(('.py', '.bat')):
+                if 'plugins' in file:
+                    categories['plugins'].append(file)
+                elif any(name in file for name in ['window', 'dialog', 'panel', 'card']):
+                    categories['ui'].append(file)
+                elif file in ['main.py', 'updater.py', 'version.py', 'app_paths.py']:
+                    categories['core'].append(file)
+                else:
+                    categories['other'].append(file)
+            else:
+                categories['other'].append(file)
+        
+        result = []
+        if categories['core']:
+            result.append("### Основные компоненты:")
+            result.extend(f"- Обновлен {os.path.basename(f)}" for f in categories['core'])
+        
+        if categories['ui']:
+            result.append("\n### Интерфейс:")
+            result.extend(f"- Обновлен {os.path.basename(f)}" for f in categories['ui'])
+        
+        if categories['plugins']:
+            result.append("\n### Плагины:")
+            result.extend(f"- Обновлен {os.path.basename(f)}" for f in categories['plugins'])
+        
+        if categories['other']:
+            result.append("\n### Прочие изменения:")
+            result.extend(f"- Обновлен {os.path.basename(f)}" for f in categories['other'])
+        
+        return "\n".join(result)
+    
+    def _format_files(self, files: List[str]) -> str:
+        """Форматирует список файлов с их размерами"""
+        result = []
+        for file in files:
+            if os.path.exists(file):
+                size = os.path.getsize(file)
+                size_str = self._format_size(size)
+                result.append(f"- {file} ({size_str})")
+        return "\n".join(result)
+    
+    def _get_update_size(self, files: List[str]) -> str:
+        """Вычисляет общий размер обновления"""
+        total_size = sum(os.path.getsize(f) for f in files if os.path.exists(f))
+        return self._format_size(total_size)
+    
+    def _format_size(self, size: int) -> str:
+        """Форматирует размер файла в человекочитаемый вид"""
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024:
+                return f"{size:.1f} {unit}"
+            size /= 1024
+        return f"{size:.1f} TB"
+    
     def create_release(self):
         """Создание нового релиза"""
         if not self.token:
@@ -25,27 +214,46 @@ class ReleaseManager:
         
         zip_path = None
         try:
-            # Создаем ZIP архив
-            print("Создание архива релиза...")
-            zip_path = self._create_release_archive()
+            # Получаем список измененных файлов
+            print("Получение списка измененных файлов...")
+            changed_files = self.get_changed_files()
+            
+            if not changed_files:
+                print("Нет измененных файлов для релиза")
+                return
+            
+            print("\nИзмененные файлы:")
+            for file in changed_files:
+                print(f"  - {file}")
+            
+            # Увеличиваем версию
+            new_version = self.increment_version()
+            
+            # Создаем архив только с измененными файлами
+            print("\nСоздание архива релиза...")
+            zip_path = self.create_release_archive(changed_files)
             
             # Проверяем размер архива
             zip_size = os.path.getsize(zip_path)
             if zip_size > 100 * 1024 * 1024:  # 100 MB
                 raise ValueError(f"Размер архива ({zip_size / 1024 / 1024:.1f} MB) превышает 100 MB")
             
+            # Создаем коммит и отправляем изменения
+            print("\nОтправка изменений в репозиторий...")
+            self.commit_and_push(new_version, changed_files)
+            
             # Создаем релиз на GitHub
-            print(f"Создание релиза версии {VERSION}...")
+            print(f"\nСоздание релиза версии {new_version}...")
             headers = {
                 "Authorization": f"token {self.token}",
                 "Accept": "application/vnd.github.v3+json"
             }
             
             release_data = {
-                "tag_name": f"v{VERSION}",
+                "tag_name": f"v{new_version}",
                 "target_commitish": "main",
-                "name": f"Версия {VERSION}",
-                "body": self._generate_release_notes(),
+                "name": f"Версия {new_version}",
+                "body": self.generate_release_notes(changed_files),
                 "draft": False,
                 "prerelease": False
             }
@@ -66,7 +274,7 @@ class ReleaseManager:
                     if attempt == self.max_retries - 1:
                         raise
                     print(f"Попытка {attempt + 1} не удалась: {str(e)}")
-                    time.sleep(2 ** attempt)  # Экспоненциальная задержка
+                    time.sleep(2 ** attempt)
             
             # Загружаем архив
             print("Загрузка архива...")
@@ -79,7 +287,7 @@ class ReleaseManager:
                         response = requests.post(
                             upload_url,
                             headers={**headers, "Content-Type": "application/zip"},
-                            params={'name': f'BProjectManager-{VERSION}.zip'},
+                            params={'name': f'BProjectManager-{new_version}.zip'},
                             data=f,
                             timeout=self.timeout
                         )
@@ -91,7 +299,7 @@ class ReleaseManager:
                     print(f"Попытка загрузки {attempt + 1} не удалась: {str(e)}")
                     time.sleep(2 ** attempt)
             
-            print(f"Релиз версии {VERSION} успешно создан!")
+            print(f"\nРелиз версии {new_version} успешно создан!")
             print(f"URL релиза: {release['html_url']}")
             
         except Exception as e:
@@ -104,129 +312,6 @@ class ReleaseManager:
                     os.remove(zip_path)
                 except Exception as e:
                     print(f"Не удалось удалить временный архив: {str(e)}")
-    
-    def _create_release_archive(self):
-        """Создание ZIP архива с файлами релиза"""
-        zip_path = f"BProjectManager-{VERSION}.zip"
-        
-        # Список файлов и директорий для включения в архив
-        include_files = [
-            # Основные файлы приложения
-            'main.py',
-            'project_window.py',
-            'settings_dialog.py',
-            'updater.py',
-            'version.py',
-            'requirements.txt',
-            'README.md',
-            'LICENSE',
-            
-            # Компоненты интерфейса
-            'styles.py',
-            'create_project_dialog.py',
-            'search_panel.py',
-            'project_card.py',
-            'project_group.py',
-            
-            # Ресурсы
-            'icons/',
-            
-            # Настройка и запуск
-            'python_setup.py',
-            'launcher.bat',
-            'start_app.bat',
-            
-            # Плагины и аддоны
-            'blender_addon.py',
-            'plugins/substance_painter_plugin',
-            
-            # Утилиты
-            'backup_app.py',
-            'convert_icons.py'
-        ]
-        
-        # Список файлов для исключения
-        exclude_files = [
-            '__pycache__',
-            '*.pyc',
-            '.git',
-            '.gitignore',
-            'release_manager.py',
-            'git_commit.bat',
-            'build_installer.bat',
-            'build_environment.bat',
-            'installer.iss',
-            'test.py',
-            '*.zip',
-            'settings.json',
-            'projects.json',
-            '*.log',
-            'temp_*'
-        ]
-        
-        missing_files = []
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for item in include_files:
-                if not os.path.exists(item):
-                    missing_files.append(item)
-                    continue
-                    
-                if os.path.isfile(item):
-                    print(f"Добавление файла: {item}")
-                    zf.write(item)
-                elif os.path.isdir(item):
-                    print(f"Добавление директории: {item}")
-                    for root, dirs, files in os.walk(item):
-                        # Пропускаем исключенные директории
-                        dirs[:] = [d for d in dirs if not any(
-                            d.startswith(ex.rstrip('/')) or 
-                            any(d.endswith(ex.lstrip('*')) for ex in exclude_files if ex.startswith('*'))
-                            for ex in exclude_files
-                        )]
-                        
-                        for file in files:
-                            # Пропускаем исключенные файлы
-                            if any(
-                                file.endswith(ex.lstrip('*')) or
-                                file == ex
-                                for ex in exclude_files
-                            ):
-                                continue
-                            
-                            file_path = os.path.join(root, file)
-                            print(f"  + {file_path}")
-                            zf.write(file_path)
-        
-        if missing_files:
-            print("\nВНИМАНИЕ: Следующие файлы не найдены:")
-            for file in missing_files:
-                print(f"  - {file}")
-            
-            if not os.path.getsize(zip_path):
-                raise FileNotFoundError("Не удалось создать архив: все файлы отсутствуют")
-        
-        return zip_path
-    
-    def _generate_release_notes(self):
-        """Генерация описания релиза"""
-        return f"""# BProjectManager {VERSION}
-
-## Что нового:
-- Улучшена система обновления
-- Исправлены проблемы с путями в PowerShell скриптах
-- Добавлено автоматическое создание резервной копии перед обновлением
-- Улучшена обработка ошибок при обновлении
-
-## Установка
-1. Скачайте архив BProjectManager-{VERSION}.zip
-2. Распакуйте архив в нужную директорию
-3. Запустите `start_app.bat`
-
-## Системные требования
-- Windows 10 или выше
-- 100 MB свободного места на диске
-- Доступ к интернету для обновлений
-"""
 
 if __name__ == "__main__":
     try:
