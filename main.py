@@ -102,7 +102,7 @@ class MainWindow(QMainWindow):
         
         # Область со всеми проектами
         all_projects = QFrame()
-        all_projects.setObjectName("projects_container")  # Добавляем идентификатор
+        all_projects.setObjectName("projects_container")
         all_layout = QVBoxLayout(all_projects)
         all_title = QLabel("Проекты")
         all_title.setStyleSheet(SECTION_TITLE_STYLE)
@@ -112,8 +112,8 @@ class MainWindow(QMainWindow):
         self.all_projects_container = QWidget()
         self.all_projects_container.setObjectName("all_projects_container")
         self.all_projects_layout = QGridLayout(self.all_projects_container)
-        self.all_projects_layout.setSpacing(20)  # Увеличиваем расстояние между карточками
-        self.all_projects_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)  # Выравнивание слева сверху
+        self.all_projects_layout.setSpacing(20)
+        self.all_projects_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         
         all_scroll = QScrollArea()
         all_scroll.setWidget(self.all_projects_container)
@@ -121,7 +121,7 @@ class MainWindow(QMainWindow):
         all_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         all_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         all_scroll.setStyleSheet(SCROLL_AREA_STYLE)
-        all_scroll.widget().setObjectName("scrollAreaWidgetContents")  # Добавляем идентификатор для внутреннего виджета
+        all_scroll.widget().setObjectName("scrollAreaWidgetContents")
         all_layout.addWidget(all_scroll)
         left_layout.addWidget(all_projects)
         
@@ -131,13 +131,13 @@ class MainWindow(QMainWindow):
         right_panel = QFrame()
         right_panel.setObjectName("right_panel")
         right_panel.setStyleSheet(RIGHT_PANEL_STYLE)
-        right_layout = QVBoxLayout(right_panel)
+        self.favorites_layout = QVBoxLayout(right_panel)  # Сохраняем ссылку на layout избранного
         
         favorites_title = QLabel("Избранное")
         favorites_title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        right_layout.addWidget(favorites_title)
+        self.favorites_layout.addWidget(favorites_title)
         
-        right_layout.addStretch()
+        self.favorites_layout.addStretch()
         main_layout.addWidget(right_panel, stretch=3)
         
         # Инициализируем переменные для адаптивной сетки
@@ -148,7 +148,8 @@ class MainWindow(QMainWindow):
         self.project_groups = {}  # Словарь для хранения групп проектов
         self.project_windows = {}  # Словарь для хранения открытых окон проектов
         
-        # Загружаем существующие проекты
+        # Загружаем настройки и существующие проекты
+        self.load_settings()
         self.load_projects()
         
         # Устанавливаем минимальный размер окна
@@ -192,7 +193,9 @@ class MainWindow(QMainWindow):
     
     def on_settings_changed(self, settings):
         """Обработчик изменения настроек"""
-        # Перезагружаем проекты при изменении пути к проектам
+        # Сохраняем новые настройки
+        self.settings = settings
+        # Перезагружаем проекты
         self.reload_projects()
     
     def reload_projects(self):
@@ -204,8 +207,8 @@ class MainWindow(QMainWindow):
                 item.widget().deleteLater()
         
         # Очищаем избранное
-        while self.favorites_layout.count():
-            item = self.favorites_layout.takeAt(0)
+        while self.favorites_layout.count() > 1:  # Оставляем заголовок
+            item = self.favorites_layout.takeAt(1)
             if item.widget():
                 item.widget().deleteLater()
         
@@ -213,23 +216,7 @@ class MainWindow(QMainWindow):
         self.project_groups.clear()
         
         # Загружаем проекты заново
-        try:
-            if os.path.exists('projects.json'):
-                with open('projects.json', 'r') as f:
-                    projects_data = json.load(f)
-                    
-                    # Загружаем отдельные проекты
-                    for project in projects_data.get('projects', []):
-                        self.add_project(project)
-                    
-                    # Загружаем группы
-                    for group_data in projects_data.get('groups', []):
-                        self.create_project_group(group_data['name'], group_data['projects'])
-        except Exception as e:
-            print(f"Error reloading projects: {e}")
-        
-        # Обновляем сетку
-        self.update_grid_layout()
+        self.load_projects()
     
     def show_create_project_dialog(self):
         dialog = CreateProjectDialog(self)
@@ -241,8 +228,8 @@ class MainWindow(QMainWindow):
         """Восстанавливает проекты, которые есть в файловой системе, но отсутствуют в интерфейсе"""
         try:
             # Получаем список всех проектов из файловой системы
-            projects_dir = os.path.expanduser("~/Documents/Projects5")
-            if not os.path.exists(projects_dir):
+            projects_dir = self.settings.get('projects_path', '')
+            if not projects_dir or not os.path.exists(projects_dir):
                 return
             
             # Собираем все существующие пути проектов
@@ -278,15 +265,40 @@ class MainWindow(QMainWindow):
             print(f"Error in restore_missing_projects: {e}")
             traceback.print_exc()
 
+    def load_settings(self):
+        """Загружает настройки приложения"""
+        try:
+            if os.path.exists('settings.json'):
+                with open('settings.json', 'r') as f:
+                    self.settings = json.load(f)
+            else:
+                # Создаем настройки по умолчанию
+                self.settings = {
+                    'projects_path': os.path.expanduser("~/Documents/Projects5"),
+                    'blender_path': '',
+                    'substance_path': ''
+                }
+                # Сохраняем настройки по умолчанию
+                with open('settings.json', 'w') as f:
+                    json.dump(self.settings, f, indent=4)
+        except Exception as e:
+            print(f"Error loading settings: {e}")
+            # В случае ошибки используем настройки по умолчанию
+            self.settings = {
+                'projects_path': os.path.expanduser("~/Documents/Projects5"),
+                'blender_path': '',
+                'substance_path': ''
+            }
+
     def load_projects(self):
         try:
             # Очищаем существующие проекты и группы
             self.clear_projects()
             self.project_groups.clear()
             
-            # Получаем путь к каталогу проектов
-            projects_dir = os.path.expanduser("~/Documents/Projects5")
-            if not os.path.exists(projects_dir):
+            # Получаем путь к каталогу проектов из настроек
+            projects_dir = self.settings.get('projects_path', '')
+            if not projects_dir or not os.path.exists(projects_dir):
                 return
             
             # Словарь для хранения информации о проектах
@@ -558,8 +570,8 @@ class MainWindow(QMainWindow):
     
     def save_projects(self):
         try:
-            projects_dir = os.path.expanduser("~/Documents/Projects5")
-            if not os.path.exists(projects_dir):
+            projects_dir = self.settings.get('projects_path', '')
+            if not projects_dir or not os.path.exists(projects_dir):
                 return
             
             # Сохраняем информацию о группах
@@ -649,68 +661,35 @@ class MainWindow(QMainWindow):
             event.ignore()
 
     def import_project(self):
-        """Импортирует проект из архива"""
+        """Импортирует существующий проект"""
         try:
-            # Открываем диалог выбора архива
-            archive_path, _ = QFileDialog.getOpenFileName(
+            # Получаем путь к папке с проектом
+            project_path = QFileDialog.getExistingDirectory(
                 self,
-                "Выберите архив проекта для импорта",
-                "",
-                "Архивы проектов (*.zip)"
+                "Выберите папку проекта для импорта"
             )
             
-            if not archive_path:
+            if not project_path:
                 return
             
-            print(f"Выбран архив: {archive_path}")
-            
-            # Создаем временную папку для распаковки
-            temp_dir = os.path.join(os.path.expanduser("~/Documents/Projects5"), ".temp_import")
-            if os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
-            os.makedirs(temp_dir)
-            print(f"Создана временная папка: {temp_dir}")
+            # Создаем временную директорию для импорта
+            temp_dir = os.path.join(self.settings.get('projects_path', ''), ".temp_import")
+            os.makedirs(temp_dir, exist_ok=True)
             
             try:
-                # Распаковываем архив во временную папку
-                with zipfile.ZipFile(archive_path, 'r') as zipf:
-                    print(f"Содержимое архива: {zipf.namelist()}")
-                    zipf.extractall(temp_dir)
-                
-                # Проверяем наличие файла с метаданными
-                project_info_path = os.path.join(temp_dir, "project_info.json")
-                if not os.path.exists(project_info_path):
-                    raise Exception("Архив не содержит информации о проекте (project_info.json)")
-                
-                # Читаем метаданные проекта
-                with open(project_info_path, 'r', encoding='utf-8') as f:
-                    project_info = json.load(f)
-                    print(f"Прочитанные метаданные: {project_info}")
-                
-                # Создаем новый путь для проекта
-                projects_dir = os.path.expanduser("~/Documents/Projects5")
-                
-                # Получаем имя проекта из архива или из имени архива
-                if "name" in project_info:
-                    project_name = project_info["name"]
-                else:
-                    # Извлекаем имя из имени архива
-                    project_name = os.path.basename(archive_path)
-                    if project_name.endswith('.zip'):
-                        project_name = project_name[:-4]
-                    if '_archive_' in project_name:
-                        project_name = project_name.split('_archive_')[0]
-                
-                print(f"Имя проекта: {project_name}")
-                new_project_path = os.path.join(projects_dir, project_name)
+                # Копируем содержимое проекта во временную папку
+                project_name = os.path.basename(project_path)
+                new_project_path = os.path.join(self.settings.get('projects_path', ''), project_name)
                 
                 # Проверяем, не существует ли уже проект с таким именем
                 if os.path.exists(new_project_path):
-                    # Добавляем к имени timestamp
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    project_name = f"{project_name}_{timestamp}"
-                    new_project_path = os.path.join(projects_dir, project_name)
-                    print(f"Создано новое имя проекта: {project_name}")
+                    QMessageBox.warning(
+                        self,
+                        "Ошибка импорта",
+                        "Проект с таким именем уже существует.",
+                        QMessageBox.StandardButton.Ok
+                    )
+                    return
                 
                 # Перемещаем содержимое временной папки в новую папку проекта
                 print(f"Перемещение в: {new_project_path}")
@@ -722,8 +701,8 @@ class MainWindow(QMainWindow):
                     "path": new_project_path.replace("\\", "/"),
                     "created": datetime.now().timestamp(),
                     "favorite": False,
-                    "description": project_info.get("description", ""),
-                    "tags": project_info.get("tags", []),
+                    "description": "",
+                    "tags": [],
                     "last_modified": datetime.now().timestamp()
                 }
                 

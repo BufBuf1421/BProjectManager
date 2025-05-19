@@ -77,6 +77,7 @@ class ReleaseManager:
         
         # Список файлов и директорий для включения в архив
         include_files = [
+            # Основные файлы приложения
             'main.py',
             'project_window.py',
             'settings_dialog.py',
@@ -84,12 +85,31 @@ class ReleaseManager:
             'version.py',
             'requirements.txt',
             'README.md',
-            'icons/',
+            'LICENSE',
+            
+            # Компоненты интерфейса
             'styles.py',
             'create_project_dialog.py',
             'search_panel.py',
             'project_card.py',
-            'project_group.py'
+            'project_group.py',
+            
+            # Ресурсы
+            'icons/',
+            
+            # Настройка и запуск
+            'python_setup.py',
+            'launcher.bat',
+            'start_app.bat',
+            
+            # Плагины и аддоны
+            'blender_addon.py',
+            'substance_painter_plugin.py',
+            'launch_sp.bat',
+            
+            # Утилиты
+            'backup_app.py',
+            'convert_icons.py'
         ]
         
         # Список файлов для исключения
@@ -98,7 +118,15 @@ class ReleaseManager:
             '*.pyc',
             '.git',
             '.gitignore',
-            'release_manager.py'
+            'release_manager.py',
+            'git_commit.bat',
+            'build_installer.bat',
+            'build_environment.bat',
+            'installer.iss',
+            'test.py',
+            '*.zip',
+            'settings.json',
+            'projects.json'
         ]
         
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -125,7 +153,7 @@ class ReleaseManager:
         return f"""# BProjectManager {VERSION}
 
 ## Что нового:
-- Добавлена система автоматического обновления
+- Добавлена система обновления
 - Улучшен интерфейс окна настроек
 - Исправлены мелкие ошибки
 
