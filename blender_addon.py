@@ -1,6 +1,6 @@
 bl_info = {
     "name": "Project Manager Integration",
-    "author": "Your Name",
+    "author": "BUF",
     "version": (0, 1, 0),
     "blender": (4, 3, 0),
     "location": "View3D > Sidebar > Project Manager",
