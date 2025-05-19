@@ -1,23 +1,61 @@
-import sys
-import traceback
-import json
 import os
-import zipfile
-import shutil
-from datetime import datetime
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QPushButton,
-                           QVBoxLayout, QHBoxLayout, QLabel, QFrame, QLineEdit,
-                           QScrollArea, QDialog, QGridLayout, QFileDialog, QMessageBox)
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPainter, QPen, QColor
-from settings_dialog import SettingsDialog
-from create_project_dialog import CreateProjectDialog
-from project_card import ProjectCard
-from project_group import ProjectGroup
-from project_window import ProjectWindow
-from styles import (MAIN_WINDOW_STYLE, RIGHT_PANEL_STYLE, 
-                   SECTION_TITLE_STYLE, PROJECT_CARD_STYLE,
-                   SCROLL_AREA_STYLE, SIZES)
+import sys
+
+print("Запуск main.py")
+print(f"Текущая директория: {os.getcwd()}")
+print(f"Путь к Python: {sys.executable}")
+print(f"Версия Python: {sys.version}")
+print(f"sys.path: {sys.path}")
+
+# Добавляем текущую директорию в путь поиска модулей
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+    print(f"Добавлен путь в sys.path: {current_dir}")
+
+# Настраиваем окружение Python перед импортом других модулей
+print("Импорт python_setup...")
+try:
+    from python_setup import setup_python_env
+    print("Модуль python_setup успешно импортирован")
+except ImportError as e:
+    print(f"Ошибка импорта python_setup: {e}")
+    print("Содержимое текущей директории:")
+    for item in os.listdir(current_dir):
+        print(f"  {item}")
+    sys.exit(1)
+
+print("Настройка окружения...")
+if not setup_python_env():
+    print("Ошибка: Не удалось настроить окружение Python")
+    sys.exit(1)
+
+print("Импорт необходимых модулей...")
+try:
+    import traceback
+    import json
+    import zipfile
+    import shutil
+    from datetime import datetime
+    from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QPushButton,
+                               QVBoxLayout, QHBoxLayout, QLabel, QFrame, QLineEdit,
+                               QScrollArea, QDialog, QGridLayout, QFileDialog, QMessageBox)
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QPainter, QPen, QColor
+    from settings_dialog import SettingsDialog
+    from create_project_dialog import CreateProjectDialog
+    from project_card import ProjectCard
+    from project_group import ProjectGroup
+    from project_window import ProjectWindow
+    from styles import (MAIN_WINDOW_STYLE, RIGHT_PANEL_STYLE, 
+                       SECTION_TITLE_STYLE, PROJECT_CARD_STYLE,
+                       SCROLL_AREA_STYLE, SIZES)
+    print("Импорт PyQt6 успешен")
+except ImportError as e:
+    print(f"Ошибка импорта: {e}")
+    print("Полный стек ошибки:")
+    traceback.print_exc()
+    sys.exit(1)
 
 class MainWindow(QMainWindow):
     def __init__(self):
