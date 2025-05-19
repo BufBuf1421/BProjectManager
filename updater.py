@@ -55,9 +55,22 @@ class Updater(QObject):
             print(f"[DEBUG] Starting download from: {download_url}")
             print(f"[DEBUG] Saving to: {save_path}")
             
+            # Создаем директорию для сохранения, если она не существует
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            
+            # Удаляем старый файл обновления, если он существует
+            if os.path.exists(save_path):
+                os.remove(save_path)
+            
             response = requests.get(download_url, stream=True)
+            if response.status_code != 200:
+                raise Exception(f"Failed to download update: HTTP {response.status_code}")
+                
             total_size = int(response.headers.get('content-length', 0))
             print(f"[DEBUG] Total download size: {total_size} bytes")
+            
+            if total_size == 0:
+                raise Exception("Invalid download size")
             
             block_size = 1024
             downloaded = 0
@@ -71,6 +84,13 @@ class Updater(QObject):
                         print(f"[DEBUG] Download progress: {progress}%")
                         self.update_progress.emit(progress)
             
+            # Проверяем, что файл действительно загружен
+            if not os.path.exists(save_path):
+                raise Exception("Update file was not created")
+                
+            if os.path.getsize(save_path) == 0:
+                raise Exception("Update file is empty")
+                
             print("[DEBUG] Download completed successfully")
             return True
         except Exception as e:
