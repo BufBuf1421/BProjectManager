@@ -22,46 +22,22 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(15)
         
-        # Информация о версии и обновлениях
+        # Информация о версии
         version_layout = QHBoxLayout()
         version_label = QLabel(f"Текущая версия: {VERSION}")
         version_layout.addWidget(version_label)
-        
-        # Добавляем кнопку проверки обновлений
-        self.check_updates_btn = QPushButton("Проверить обновления")
-        self.check_updates_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                padding: 5px 15px;
-                border-radius: 3px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-            }
-        """)
-        self.check_updates_btn.clicked.connect(self.check_for_updates)
-        version_layout.addWidget(self.check_updates_btn)
-        
-        # Добавляем прогресс-бар
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setStyleSheet("""
-            QProgressBar {
-                border: 1px solid #cccccc;
-                border-radius: 3px;
-                text-align: center;
-            }
-            QProgressBar::chunk {
-                background-color: #4CAF50;
-            }
-        """)
-        self.progress_bar.hide()
-        
         layout.addLayout(version_layout)
+        
+        # Кнопка проверки обновлений
+        update_layout = QHBoxLayout()
+        self.check_updates_btn = QPushButton("Проверить обновления")
+        self.check_updates_btn.clicked.connect(self.check_for_updates)
+        update_layout.addWidget(self.check_updates_btn)
+        layout.addLayout(update_layout)
+        
+        # Прогресс-бар (скрыт по умолчанию)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.hide()
         layout.addWidget(self.progress_bar)
         
         # Путь к проектам
@@ -96,12 +72,6 @@ class SettingsDialog(QDialog):
         substance_layout.addWidget(self.substance_path)
         substance_layout.addWidget(browse_substance)
         layout.addLayout(substance_layout)
-        
-        # Добавляем информацию о новой версии
-        self.update_info = QLabel()
-        self.update_info.setStyleSheet("color: #4CAF50; margin-top: 10px;")
-        self.update_info.hide()
-        layout.addWidget(self.update_info)
         
         # Кнопки
         buttons_layout = QHBoxLayout()
@@ -164,12 +134,9 @@ class SettingsDialog(QDialog):
         """Проверка обновлений"""
         self.check_updates_btn.setEnabled(False)
         self.check_updates_btn.setText("Проверка обновлений...")
-        self.update_info.hide()
         has_update, version, download_url = self.updater.check_for_updates()
         
         if has_update:
-            self.update_info.setText(f"Доступна новая версия {version}!")
-            self.update_info.show()
             reply = QMessageBox.question(
                 self,
                 "Доступно обновление",
@@ -180,8 +147,11 @@ class SettingsDialog(QDialog):
             if reply == QMessageBox.StandardButton.Yes:
                 self.download_update(download_url)
         else:
-            self.update_info.setText("У вас установлена последняя версия!")
-            self.update_info.show()
+            QMessageBox.information(
+                self,
+                "Обновление не требуется",
+                "У вас установлена последняя версия приложения."
+            )
         
         self.check_updates_btn.setEnabled(True)
         self.check_updates_btn.setText("Проверить обновления")
@@ -204,20 +174,55 @@ class SettingsDialog(QDialog):
         try:
             # Создаем bat-файл для обновления
             update_script = os.path.join(os.path.dirname(update_file), 'update.bat')
-            app_path = os.path.dirname(sys.executable)
+            ps_script = os.path.join(os.path.dirname(update_file), 'update.ps1')
+            app_path = os.path.dirname(os.path.dirname(sys.executable))  # Путь к корневой папке приложения
             
-            with open(update_script, 'w') as f:
+            print(f"[DEBUG] Update file path: {update_file}")
+            print(f"[DEBUG] App path: {app_path}")
+            print(f"[DEBUG] Python executable: {sys.executable}")
+            
+            # Создаем PowerShell скрипт
+            with open(ps_script, 'w', encoding='utf-8') as f:
+                f.write('$ErrorActionPreference = "Stop"\n')
+                f.write('try {\n')
+                f.write('    Write-Host "Starting update..."\n')
+                f.write(f'    Expand-Archive -Path "{update_file}" -DestinationPath "{app_path}" -Force\n')
+                f.write('    if ($LASTEXITCODE -ne 0) { throw "Archive extraction failed" }\n')
+                f.write('    Write-Host "Update extracted successfully"\n')
+                f.write(f'    Remove-Item "{update_file}" -Force\n')
+                f.write('    Write-Host "Starting application..."\n')
+                f.write(f'    Start-Process "{os.path.join(app_path, "launcher.bat")}"\n')
+                f.write('} catch {\n')
+                f.write('    Write-Host ("Update failed: " + $_.Exception.Message)\n')
+                f.write('    Write-Host "Press any key to continue..."\n')
+                f.write('    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")\n')
+                f.write('    exit 1\n')
+                f.write('}\n')
+            
+            # Создаем BAT файл
+            with open(update_script, 'w', encoding='utf-8') as f:
                 f.write('@echo off\n')
-                f.write('timeout /t 2 /nobreak\n')  # Ждем закрытия приложения
-                f.write(f'powershell Expand-Archive -Path "{update_file}" -DestinationPath "{app_path}" -Force\n')
-                f.write(f'del "{update_file}"\n')
-                f.write(f'start "" "{sys.executable}"\n')
-                f.write('del "%~f0"')  # Самоудаление bat-файла
+                f.write('echo Waiting for application to close...\n')
+                f.write('timeout /t 2 /nobreak\n')
+                f.write(f'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{ps_script}"\n')
+                f.write('if errorlevel 1 (\n')
+                f.write('    echo Update failed\n')
+                f.write('    pause\n')
+                f.write('    del "%~f0"\n')
+                f.write(f'    del "{ps_script}"\n')
+                f.write(') else (\n')
+                f.write('    del "%~f0"\n')
+                f.write(f'    del "{ps_script}"\n')
+                f.write(')\n')
+            
+            print(f"[DEBUG] Created update scripts: {update_script}, {ps_script}")
             
             # Запускаем скрипт обновления и закрываем приложение
             subprocess.Popen([update_script], shell=True)
+            print("[DEBUG] Update script started, closing application...")
             self.parent().close()
         except Exception as e:
+            print(f"[ERROR] Update installation failed: {str(e)}")
             QMessageBox.critical(
                 self,
                 "Ошибка обновления",
@@ -226,8 +231,7 @@ class SettingsDialog(QDialog):
     
     def on_update_available(self, version):
         """Обработчик сигнала о доступности обновления"""
-        self.update_info.setText(f"Доступна новая версия {version}!")
-        self.update_info.show()
+        pass
     
     def on_update_progress(self, progress):
         """Обработчик сигнала прогресса загрузки"""

@@ -14,31 +14,51 @@ class Updater(QObject):
         super().__init__(parent)
         self.current_version = VERSION
         self.github_api_url = "https://api.github.com/repos/BufBuf1421/BProjectManager/releases/latest"
+        print(f"[DEBUG] Updater initialized with current version: {self.current_version}")
         
     def check_for_updates(self):
         """Проверка наличия обновлений"""
         try:
+            print(f"[DEBUG] Checking for updates at: {self.github_api_url}")
             response = requests.get(self.github_api_url)
+            print(f"[DEBUG] Response status code: {response.status_code}")
+            
             if response.status_code == 200:
                 release_info = response.json()
                 latest_version = release_info['tag_name'].lstrip('v')
+                print(f"[DEBUG] Latest version: {latest_version}, Current version: {self.current_version}")
                 
-                if self._compare_versions(latest_version, self.current_version) > 0:
+                comparison = self._compare_versions(latest_version, self.current_version)
+                print(f"[DEBUG] Version comparison result: {comparison}")
+                
+                if comparison > 0:
+                    download_url = release_info['assets'][0]['browser_download_url']
+                    print(f"[DEBUG] Update available. Download URL: {download_url}")
                     self.update_available.emit(latest_version)
-                    return True, latest_version, release_info['assets'][0]['browser_download_url']
+                    return True, latest_version, download_url
+                print("[DEBUG] No update needed")
                 return False, None, None
             else:
-                self.update_error.emit("Ошибка при проверке обновлений")
+                error_msg = "Ошибка при проверке обновлений"
+                print(f"[ERROR] {error_msg}")
+                self.update_error.emit(error_msg)
                 return False, None, None
         except Exception as e:
-            self.update_error.emit(f"Ошибка при проверке обновлений: {str(e)}")
+            error_msg = f"Ошибка при проверке обновлений: {str(e)}"
+            print(f"[ERROR] {error_msg}")
+            self.update_error.emit(error_msg)
             return False, None, None
     
     def download_update(self, download_url, save_path):
         """Загрузка обновления"""
         try:
+            print(f"[DEBUG] Starting download from: {download_url}")
+            print(f"[DEBUG] Saving to: {save_path}")
+            
             response = requests.get(download_url, stream=True)
             total_size = int(response.headers.get('content-length', 0))
+            print(f"[DEBUG] Total download size: {total_size} bytes")
+            
             block_size = 1024
             downloaded = 0
             
@@ -48,11 +68,15 @@ class Updater(QObject):
                     f.write(data)
                     if total_size:
                         progress = int((downloaded / total_size) * 100)
+                        print(f"[DEBUG] Download progress: {progress}%")
                         self.update_progress.emit(progress)
             
+            print("[DEBUG] Download completed successfully")
             return True
         except Exception as e:
-            self.update_error.emit(f"Ошибка при загрузке обновления: {str(e)}")
+            error_msg = f"Ошибка при загрузке обновления: {str(e)}"
+            print(f"[ERROR] {error_msg}")
+            self.update_error.emit(error_msg)
             return False
     
     def _compare_versions(self, version1, version2):
@@ -60,15 +84,19 @@ class Updater(QObject):
         1 если version1 > version2
         -1 если version1 < version2
         0 если версии равны"""
-        v1_parts = [int(x) for x in version1.split('.')]
-        v2_parts = [int(x) for x in version2.split('.')]
-        
-        for i in range(max(len(v1_parts), len(v2_parts))):
-            v1 = v1_parts[i] if i < len(v1_parts) else 0
-            v2 = v2_parts[i] if i < len(v2_parts) else 0
+        try:
+            v1_parts = [int(x) for x in version1.split('.')]
+            v2_parts = [int(x) for x in version2.split('.')]
             
-            if v1 > v2:
-                return 1
-            elif v1 < v2:
-                return -1
-        return 0 
+            for i in range(max(len(v1_parts), len(v2_parts))):
+                v1 = v1_parts[i] if i < len(v1_parts) else 0
+                v2 = v2_parts[i] if i < len(v2_parts) else 0
+                
+                if v1 > v2:
+                    return 1
+                elif v1 < v2:
+                    return -1
+            return 0
+        except Exception as e:
+            print(f"[ERROR] Version comparison failed: {str(e)}")
+            return 0 
