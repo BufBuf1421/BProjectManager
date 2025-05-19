@@ -4,21 +4,21 @@ import json
 import zipfile
 import requests
 from version import VERSION
-from getpass import getpass
 
 class ReleaseManager:
     def __init__(self):
         self.repo = "BufBuf1421/BProjectManager"
         self.api_url = f"https://api.github.com/repos/{self.repo}/releases"
-        self.token = None
+        self.token = os.getenv('GITHUB_TOKEN')
         
     def create_release(self):
         """Создание нового релиза"""
         if not self.token:
-            print("Для создания релиза необходим токен GitHub.")
-            print("Создайте его в настройках GitHub: Settings -> Developer settings -> Personal access tokens -> Tokens (classic)")
-            print("Токен должен иметь права: repo")
-            self.token = getpass("Введите ваш GitHub токен: ")
+            print("ОШИБКА: Токен GitHub не найден!")
+            print("Установите переменную окружения GITHUB_TOKEN с вашим токеном")
+            print("Например:")
+            print("$env:GITHUB_TOKEN = 'ваш_токен'")
+            return
         
         # Создаем ZIP архив
         print("Создание архива релиза...")
