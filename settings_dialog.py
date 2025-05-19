@@ -7,7 +7,7 @@ import sys
 import subprocess
 import shutil
 from styles import SETTINGS_DIALOG_STYLE
-from updater_new import UpdateManager
+from updater import Updater
 from version import VERSION
 from app_paths import get_app_root, validate_app_path, get_temp_dir, get_backup_dir
 import app_paths
@@ -20,6 +20,9 @@ class SettingsDialog(QDialog):
         self.setWindowTitle("Настройки")
         self.setMinimumWidth(600)
         self.setStyleSheet(SETTINGS_DIALOG_STYLE)
+        
+        # Определяем корневой путь приложения
+        self.app_root = os.path.dirname(os.path.abspath(__file__))
 
         # Создаем главный layout
         layout = QVBoxLayout(self)
@@ -98,7 +101,7 @@ class SettingsDialog(QDialog):
         self.load_settings()
         
         # Инициализация менеджера обновлений
-        self.update_manager = UpdateManager()
+        self.update_manager = Updater()
         self.update_manager.update_available.connect(self.on_update_available)
         self.update_manager.update_progress.connect(self.on_update_progress)
         self.update_manager.update_error.connect(self.on_update_error)
@@ -115,8 +118,9 @@ class SettingsDialog(QDialog):
     
     def load_settings(self):
         try:
-            if os.path.exists('settings.json'):
-                with open('settings.json', 'r') as f:
+            settings_path = os.path.join(self.app_root, 'settings.json')
+            if os.path.exists(settings_path):
+                with open(settings_path, 'r') as f:
                     settings = json.load(f)
                     self.projects_path.setText(settings.get('projects_path', ''))
                     self.blender_path.setText(settings.get('blender_path', ''))
@@ -132,7 +136,8 @@ class SettingsDialog(QDialog):
         }
         
         try:
-            with open('settings.json', 'w') as f:
+            settings_path = os.path.join(self.app_root, 'settings.json')
+            with open(settings_path, 'w') as f:
                 json.dump(settings, f, indent=4)
             self.settings_changed.emit(settings)  # Испускаем сигнал с новыми настройками
             self.accept()
