@@ -1,0 +1,182 @@
+{
+    "version": "1.0.0",
+    "release_date": "2025-05-19",
+    "files": [
+        {
+            "path": "app_paths.py",
+            "hash": "a02218b0c3c44b9e09f0e1a850891cf473e70c5b5a20d21656a7323e61818aa5",
+            "size": 7588,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/app_paths.py"
+        },
+        {
+            "path": "blender_addon.py",
+            "hash": "c12fc94472d3e7320226f29976afe26090794aff649c7fd03fc45e76067a2f9a",
+            "size": 14429,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/blender_addon.py"
+        },
+        {
+            "path": "build_environment.bat",
+            "hash": "1aa54f05a402dc7ef46ac9e8fdf6633c02dca2b168b59adae7126642eec64124",
+            "size": 2305,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/build_environment.bat"
+        },
+        {
+            "path": "build_installer.bat",
+            "hash": "60142b8be081799e59d177903406d970d604e4bb4175133a80771073d0d52028",
+            "size": 1572,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/build_installer.bat"
+        },
+        {
+            "path": "convert_icons.py",
+            "hash": "360f3003e8a93fdebb1e9a5b3e2733e7e22d0b986bb4c5b84d9f066af20ec3a8",
+            "size": 1539,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/convert_icons.py"
+        },
+        {
+            "path": "create_project_dialog.py",
+            "hash": "19682fd8b6619211c10969f35c090705cece934472d6077b0f1aa92a32a2b93d",
+            "size": 3310,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/create_project_dialog.py"
+        },
+        {
+            "path": "git_commit.bat",
+            "hash": "11cbfdd72babf90c5c2c12e9596194f6ca0de7e540ca668611e9651419b31c47",
+            "size": 745,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/git_commit.bat"
+        },
+        {
+            "path": "launcher.bat",
+            "hash": "dc922335509c075a75c092aef2fd968aba718b918b79aecb68124c305495e8ca",
+            "size": 433,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/launcher.bat"
+        },
+        {
+            "path": "launch_sp.bat",
+            "hash": "3969e04f104bc1783a9cd32ea8478d6e94366700f69f2e1acd39ca1100983dd3",
+            "size": 433,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/launch_sp.bat"
+        },
+        {
+            "path": "main.py",
+            "hash": "fd578dd2ef6a7427b36efc5cd1cd228a67cbd47ec9cfc17dbe94725c4f63406d",
+            "size": 35842,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/main.py"
+        },
+        {
+            "path": "projects.json",
+            "hash": "5d9bc3898bf8d3932ad74b543c2a4d1532bcfc25d4cd38bdfe53d573963aea08",
+            "size": 2222,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/projects.json"
+        },
+        {
+            "path": "project_card.py",
+            "hash": "43ff680c4ac536d7a948f176715448798f66fd1df3c799d15344c5444d76f340",
+            "size": 25898,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/project_card.py"
+        },
+        {
+            "path": "project_group.py",
+            "hash": "6e00d076af34c0f74416e1d994ca91e4b6426ac59d2907237b24a38f297bc4df",
+            "size": 28186,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/project_group.py"
+        },
+        {
+            "path": "project_window.py",
+            "hash": "751f3512374f2882aa6f3a09f4decefc21437f57b94c9ecf7c331a5c014f1fbf",
+            "size": 38935,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/project_window.py"
+        },
+        {
+            "path": "python_setup.py",
+            "hash": "30b7f702c64fbcca71fce7264c768b294d95e0a118b4c97e4a3dc319ba1e3f49",
+            "size": 3726,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/python_setup.py"
+        },
+        {
+            "path": "release_manager.py",
+            "hash": "2aef0883107b3d8780afe951dcaad4b34617c521983b7cb0c8e9b9ff7a0edd31",
+            "size": 14894,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/release_manager.py"
+        },
+        {
+            "path": "search_panel.py",
+            "hash": "83b23c522d39cba6ae5925c2c6ffb4f46ba2d3f24efb4f715176cf11aaf06ecd",
+            "size": 4016,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/search_panel.py"
+        },
+        {
+            "path": "settings_dialog.py",
+            "hash": "1add9efd811e4530b1fb7fe40b632404990e1257401b408643fade5d54de83f5",
+            "size": 20295,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/settings_dialog.py"
+        },
+        {
+            "path": "settings_dialog_fixed.py",
+            "hash": "5e598d35e0eb77156e4cd5d05e5ed7819aa64f4f1a010d18d8b1593ef722bace",
+            "size": 18716,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/settings_dialog_fixed.py"
+        },
+        {
+            "path": "start_app.bat",
+            "hash": "79f0a53f85171d6a7021c69c08c66ae2b0981e0722fb8f92c3e86d3321d1a0fb",
+            "size": 87,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/start_app.bat"
+        },
+        {
+            "path": "styles.py",
+            "hash": "61d2e0c78c92ccb94bf9a54c454bd58a83d93452c43384ddb5934ad222fb8387",
+            "size": 11340,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/styles.py"
+        },
+        {
+            "path": "substance_painter_plugin.py",
+            "hash": "43f6202914d69722cca6126f23f20b463aa774dd0a52f2e277956e382c6f3f66",
+            "size": 2111,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/substance_painter_plugin.py"
+        },
+        {
+            "path": "updater.py",
+            "hash": "575839118f4f76b18950742efc49c2679fb031a5fc03f7bbf8591e4763252cc0",
+            "size": 5798,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/updater.py"
+        },
+        {
+            "path": "version.py",
+            "hash": "f4b34182fa86c7177cc8748c03fb6c30ce47604492c92f9981e221bf7c4fec14",
+            "size": 19,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/version.py"
+        },
+        {
+            "path": "%APPDATA%/Adobe/Adobe Substance 3D Painter/python/plugins/project_manager/plugin.json",
+            "hash": "2cb2ffc6302d54adfbed84fd444384292668c585d277e54d2aacce5c935fe978",
+            "size": 184,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/%APPDATA%/Adobe/Adobe Substance 3D Painter/python/plugins/project_manager/plugin.json"
+        },
+        {
+            "path": "%APPDATA%/Adobe/Adobe Substance 3D Painter/python/plugins/project_manager/__init__.py",
+            "hash": "b0d0e0975571d7380b1976efb801e762173affe3cd8aa37cd9af8e6691888adf",
+            "size": 15413,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/%APPDATA%/Adobe/Adobe Substance 3D Painter/python/plugins/project_manager/__init__.py"
+        },
+        {
+            "path": "old files/settings_dialog_old.py",
+            "hash": "eb2025be4d772d89c27988e0f1115833982222c6834a53e2255930cef4f7626d",
+            "size": 9269,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/old files/settings_dialog_old.py"
+        },
+        {
+            "path": "plugins/project_manager/plugin.json",
+            "hash": "5b363c871d879012a745ff4a765043bab0be55db8fa63dc08766d6800ddc232a",
+            "size": 344,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/plugins/project_manager/plugin.json"
+        },
+        {
+            "path": "plugins/project_manager/__init__.py",
+            "hash": "3af4d98faaecaf5ad0c0592df4b816dc69ac3c5053b094c67eaa1df7e05d7adb",
+            "size": 9564,
+            "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/plugins/project_manager/__init__.py"
+        }
+    ],
+    "required_version": "0.9.0",
+    "description": "Обновление включает исправления багов и улучшения производительности"
+}
