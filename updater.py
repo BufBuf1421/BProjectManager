@@ -15,7 +15,7 @@ class Updater(QObject):
         self.current_version = VERSION
         self.github_api_url = "https://api.github.com/repos/BufBuf1421/BProjectManager/releases/latest"
         print(f"[DEBUG] Updater initialized with current version: {self.current_version}")
-        
+    
     def check_for_updates(self):
         """Проверка наличия обновлений"""
         try:
@@ -39,7 +39,7 @@ class Updater(QObject):
                 print("[DEBUG] No update needed")
                 return False, None, None
             else:
-                error_msg = "Ошибка при проверке обновлений"
+                error_msg = f"Ошибка при проверке обновлений: {response.status_code}"
                 print(f"[ERROR] {error_msg}")
                 self.update_error.emit(error_msg)
                 return False, None, None
