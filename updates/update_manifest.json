@@ -106,8 +106,8 @@
         },
         {
             "path": "settings_dialog.py",
-            "hash": "1add9efd811e4530b1fb7fe40b632404990e1257401b408643fade5d54de83f5",
-            "size": 20295,
+            "hash": "0ce4e7c807e0e4b7e17193c179e1f02739525c4592ca94813d721559af442c03",
+            "size": 9631,
             "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/settings_dialog.py"
         },
         {
@@ -136,8 +136,8 @@
         },
         {
             "path": "updater.py",
-            "hash": "575839118f4f76b18950742efc49c2679fb031a5fc03f7bbf8591e4763252cc0",
-            "size": 5798,
+            "hash": "c0b87f7dfc19f0be0e34222cf5b0af0b773c0f04811dfb8709d8441dd8167816",
+            "size": 8803,
             "url": "https://github.com/BufBuf1421/BProjectManager/releases/download/v1.0.0/updater.py"
         },
         {
