@@ -731,56 +731,102 @@ class ProjectWindow(QMainWindow):
             event.ignore()
 
     def handleDropEvent(self, event):
-        """Обработка перетаскивания файлов"""
-        if event.source() != self.tree:
-            event.ignore()
-            return
-            
-        # Получаем элемент, на который перетащили
-        drop_item = self.tree.itemAt(event.position().toPoint())
-        if not drop_item:
-            event.ignore()
-            return
-            
-        # Получаем путь назначения
-        dest_path = drop_item.data(0, Qt.ItemDataRole.UserRole)
-        if not os.path.isdir(dest_path):
-            dest_path = os.path.dirname(dest_path)
-            
-        # Получаем перетаскиваемый элемент
-        drag_item = self.tree.currentItem()
-        if not drag_item or drag_item == drop_item:
-            event.ignore()
-            return
-            
-        source_path = drag_item.data(0, Qt.ItemDataRole.UserRole)
-        if not source_path or not os.path.exists(source_path):
-            event.ignore()
-            return
-            
-        # Проверяем, не перетаскиваем ли мы папку в свою подпапку
-        if os.path.isdir(source_path) and dest_path.startswith(source_path):
-            QMessageBox.warning(self, "Ошибка", "Нельзя переместить папку в свою подпапку")
-            event.ignore()
-            return
-            
+        """Обработка перетаскивания файлов из системы"""
+        # Получаем целевую папку
+        drop_item = self.tree.itemAt(self.tree.viewport().mapFrom(self, event.position().toPoint()))
+        target_path = self.project_path
+        
+        if drop_item:
+            item_path = drop_item.data(0, Qt.ItemDataRole.UserRole)
+            if os.path.isdir(item_path):
+                target_path = item_path
+            else:
+                target_path = os.path.dirname(item_path)
+        
+        # Копируем файлы
+        for url in event.mimeData().urls():
+            file_path = url.toLocalFile()
+            if os.path.exists(file_path):
+                try:
+                    if os.path.isfile(file_path):
+                        # Копируем файл
+                        file_name = os.path.basename(file_path)
+                        dest_path = os.path.join(target_path, file_name)
+                        
+                        # Проверяем существование файла
+                        if os.path.exists(dest_path):
+                            base, ext = os.path.splitext(file_name)
+                            counter = 1
+                            while os.path.exists(os.path.join(target_path, f"{base}_{counter}{ext}")):
+                                counter += 1
+                            dest_path = os.path.join(target_path, f"{base}_{counter}{ext}")
+                        
+                        shutil.copy2(file_path, dest_path)
+                        
+                except Exception as e:
+                    QMessageBox.warning(
+                        self,
+                        "Ошибка копирования",
+                        f"Не удалось скопировать файл {os.path.basename(file_path)}:\n{str(e)}",
+                        QMessageBox.StandardButton.Ok
+                    )
+        
+        # Обновляем отображение файлов
+        self.load_project_files()
+
+    def add_files_to_folder(self, folder_path):
+        """Добавляет файлы в указанную папку проекта"""
         try:
-            # Формируем путь назначения
-            new_path = os.path.join(dest_path, os.path.basename(source_path))
-            if os.path.exists(new_path):
-                # Если файл существует, добавляем номер к имени
-                base, ext = os.path.splitext(new_path)
-                counter = 1
-                while os.path.exists(f"{base} ({counter}){ext}"):
-                    counter += 1
-                new_path = f"{base} ({counter}){ext}"
+            # Открываем диалог выбора файлов
+            files, _ = QFileDialog.getOpenFileNames(
+                self,
+                "Выберите файлы для добавления",
+                "",
+                "Все файлы (*.*);;"
+                "Изображения (*.png *.jpg *.jpeg *.bmp *.gif);;"
+                "3D модели (*.blend *.fbx *.obj *.3ds);;"
+                "Текстуры (*.spp *.psd *.tga);;"
+                "Документы (*.txt *.doc *.docx *.pdf)"
+            )
             
-            # Перемещаем файл или папку
-            shutil.move(source_path, new_path)
+            if not files:
+                return
+                
+            # Копируем каждый выбранный файл
+            for source_path in files:
+                try:
+                    # Получаем имя файла
+                    file_name = os.path.basename(source_path)
+                    dest_path = os.path.join(folder_path, file_name)
+                    
+                    # Если файл с таким именем уже существует, добавляем номер
+                    if os.path.exists(dest_path):
+                        base, ext = os.path.splitext(file_name)
+                        counter = 1
+                        while os.path.exists(os.path.join(folder_path, f"{base}_{counter}{ext}")):
+                            counter += 1
+                        dest_path = os.path.join(folder_path, f"{base}_{counter}{ext}")
+                    
+                    # Копируем файл
+                    shutil.copy2(source_path, dest_path)
+                    
+                except Exception as e:
+                    QMessageBox.warning(
+                        self,
+                        "Ошибка копирования",
+                        f"Не удалось скопировать файл {file_name}:\n{str(e)}",
+                        QMessageBox.StandardButton.Ok
+                    )
+            
+            # Обновляем отображение файлов
             self.load_project_files()
-            event.accept()
+            
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Не удалось переместить:\n{str(e)}")
-            event.ignore()
+            QMessageBox.critical(
+                self,
+                "Ошибка",
+                f"Не удалось добавить файлы:\n{str(e)}",
+                QMessageBox.StandardButton.Ok
+            )
 
  
