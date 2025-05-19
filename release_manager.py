@@ -84,7 +84,12 @@ class ReleaseManager:
             'version.py',
             'requirements.txt',
             'README.md',
-            'icons/'
+            'icons/',
+            'styles.py',
+            'create_project_dialog.py',
+            'search_panel.py',
+            'project_card.py',
+            'project_group.py'
         ]
         
         # Список файлов для исключения
