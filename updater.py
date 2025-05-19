@@ -3,6 +3,7 @@ import json
 import requests
 import hashlib
 import shutil
+from datetime import datetime
 from version import VERSION
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -27,32 +28,54 @@ class Updater(QObject):
         """Проверка наличия обновлений"""
         try:
             print(f"[DEBUG] Checking for updates at: {self.github_api_url}")
-            response = requests.get(self.github_api_url)
+            # Добавляем заголовок User-Agent для GitHub API
+            headers = {'User-Agent': 'BProjectManager-Updater'}
+            response = requests.get(self.github_api_url, headers=headers)
             print(f"[DEBUG] Response status code: {response.status_code}")
             
             if response.status_code == 200:
                 release_info = response.json()
                 latest_version = release_info['tag_name'].lstrip('v')
-                print(f"[DEBUG] Latest version: {latest_version}, Current version: {self.current_version}")
+                print(f"[DEBUG] Latest version from GitHub: {latest_version}")
+                print(f"[DEBUG] Current installed version: {self.current_version}")
                 
-                comparison = self._compare_versions(latest_version, self.current_version)
-                print(f"[DEBUG] Version comparison result: {comparison}")
+                # Преобразуем версии в числа для сравнения
+                current_parts = [int(x) for x in self.current_version.split('.')]
+                latest_parts = [int(x) for x in latest_version.split('.')]
                 
-                if comparison > 0:
-                    # Получаем URL манифеста обновлений
+                # Дополняем версии нулями, если разной длины
+                while len(current_parts) < len(latest_parts):
+                    current_parts.append(0)
+                while len(latest_parts) < len(current_parts):
+                    latest_parts.append(0)
+                
+                # Сравниваем версии
+                is_update_available = False
+                for current, latest in zip(current_parts, latest_parts):
+                    if latest > current:
+                        is_update_available = True
+                        break
+                    elif latest < current:
+                        break
+                
+                print(f"[DEBUG] Update available: {is_update_available}")
+                
+                if is_update_available:
+                    # Ищем манифест в ассетах
                     manifest_url = None
                     for asset in release_info['assets']:
-                        if asset['name'] == 'update_manifest.json':
+                        if asset['name'].startswith('update_manifest_') and asset['name'].endswith('.json'):
                             manifest_url = asset['browser_download_url']
                             break
                     
                     if not manifest_url:
                         raise Exception("Manifest file not found in release assets")
                         
-                    print(f"[DEBUG] Update available. Manifest URL: {manifest_url}")
+                    print(f"[DEBUG] Found manifest URL: {manifest_url}")
                     self.update_available.emit(latest_version)
                     return True, latest_version, manifest_url
-                print("[DEBUG] No update needed")
+                    
+                print("[DEBUG] No update needed - current version is up to date")
                 return False, None, None
             else:
                 error_msg = f"Ошибка при проверке обновлений: {response.status_code}"
