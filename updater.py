@@ -1,9 +1,12 @@
 import os
 import json
 import requests
+import hashlib
+import shutil
 from version import VERSION
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtCore import QObject, pyqtSignal
+from app_paths import get_temp_dir, get_backup_dir, get_app_root
 
 class Updater(QObject):
     update_available = pyqtSignal(str)  # Сигнал о доступности обновления
@@ -15,6 +18,9 @@ class Updater(QObject):
         super().__init__(parent)
         self.current_version = VERSION
         self.github_api_url = "https://api.github.com/repos/BufBuf1421/BProjectManager/releases/latest"
+        self.app_root = get_app_root()
+        self.temp_dir = get_temp_dir()
+        self.backup_dir = get_backup_dir()
         print(f"[DEBUG] Updater initialized with current version: {self.current_version}")
     
     def check_for_updates(self):
@@ -33,10 +39,19 @@ class Updater(QObject):
                 print(f"[DEBUG] Version comparison result: {comparison}")
                 
                 if comparison > 0:
-                    download_url = release_info['assets'][0]['browser_download_url']
-                    print(f"[DEBUG] Update available. Download URL: {download_url}")
+                    # Получаем URL манифеста обновлений
+                    manifest_url = None
+                    for asset in release_info['assets']:
+                        if asset['name'] == 'update_manifest.json':
+                            manifest_url = asset['browser_download_url']
+                            break
+                    
+                    if not manifest_url:
+                        raise Exception("Manifest file not found in release assets")
+                        
+                    print(f"[DEBUG] Update available. Manifest URL: {manifest_url}")
                     self.update_available.emit(latest_version)
-                    return True, latest_version, download_url
+                    return True, latest_version, manifest_url
                 print("[DEBUG] No update needed")
                 return False, None, None
             else:
@@ -50,56 +65,107 @@ class Updater(QObject):
             self.update_error.emit(error_msg)
             return False, None, None
     
-    def download_update(self, download_url, save_path):
-        """Загрузка обновления"""
+    def download_and_apply_update(self, manifest_url):
+        """Загрузка и применение обновления"""
         try:
-            print(f"[DEBUG] Starting download from: {download_url}")
-            print(f"[DEBUG] Saving to: {save_path}")
+            # Загружаем манифест
+            manifest_response = requests.get(manifest_url)
+            if manifest_response.status_code != 200:
+                raise Exception(f"Failed to download manifest: HTTP {manifest_response.status_code}")
             
-            # Создаем директорию для сохранения, если она не существует
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            manifest = manifest_response.json()
+            total_files = len(manifest['files'])
+            updated_files = 0
             
-            # Удаляем старый файл обновления, если он существует
-            if os.path.exists(save_path):
-                os.remove(save_path)
+            # Создаем временную директорию для загрузки
+            os.makedirs(self.temp_dir, exist_ok=True)
             
-            response = requests.get(download_url, stream=True)
-            if response.status_code != 200:
-                raise Exception(f"Failed to download update: HTTP {response.status_code}")
+            # Создаем директорию для бэкапов
+            backup_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_dir = os.path.join(self.backup_dir, f"backup_{backup_timestamp}")
+            os.makedirs(backup_dir, exist_ok=True)
+            
+            # Обрабатываем каждый файл из манифеста
+            for file_info in manifest['files']:
+                file_path = os.path.join(self.app_root, file_info['path'])
+                temp_path = os.path.join(self.temp_dir, file_info['path'])
+                backup_path = os.path.join(backup_dir, file_info['path'])
                 
-            total_size = int(response.headers.get('content-length', 0))
-            print(f"[DEBUG] Total download size: {total_size} bytes")
-            
-            if total_size == 0:
-                raise Exception("Invalid download size")
-            
-            block_size = 1024
-            downloaded = 0
-            
-            with open(save_path, 'wb') as f:
-                for data in response.iter_content(block_size):
-                    downloaded += len(data)
-                    f.write(data)
-                    if total_size:
-                        progress = int((downloaded / total_size) * 100)
-                        print(f"[DEBUG] Download progress: {progress}%")
+                # Создаем необходимые директории
+                os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+                os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+                
+                # Проверяем хеш существующего файла
+                if os.path.exists(file_path):
+                    current_hash = self._calculate_file_hash(file_path)
+                    if current_hash == file_info['hash']:
+                        # Файл не изменился, пропускаем
+                        updated_files += 1
+                        progress = int((updated_files / total_files) * 100)
                         self.update_progress.emit(progress)
+                        continue
+                    
+                    # Создаем резервную копию
+                    shutil.copy2(file_path, backup_path)
+                
+                # Загружаем новый файл
+                print(f"[DEBUG] Downloading file: {file_info['url']}")
+                file_response = requests.get(file_info['url'], stream=True)
+                if file_response.status_code != 200:
+                    raise Exception(f"Failed to download file {file_info['path']}: HTTP {file_response.status_code}")
+                
+                # Сохраняем во временную директорию
+                with open(temp_path, 'wb') as f:
+                    for chunk in file_response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                
+                # Проверяем хеш загруженного файла
+                downloaded_hash = self._calculate_file_hash(temp_path)
+                if downloaded_hash != file_info['hash']:
+                    raise Exception(f"Hash mismatch for file {file_info['path']}")
+                
+                # Копируем файл в целевую директорию
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                shutil.copy2(temp_path, file_path)
+                
+                updated_files += 1
+                progress = int((updated_files / total_files) * 100)
+                self.update_progress.emit(progress)
             
-            # Проверяем, что файл действительно загружен
-            if not os.path.exists(save_path):
-                raise Exception("Update file was not created")
-                
-            if os.path.getsize(save_path) == 0:
-                raise Exception("Update file is empty")
-                
-            print("[DEBUG] Download completed successfully")
-            self.update_completed.emit()  # Сигнализируем о завершении загрузки
+            # Очищаем временную директорию
+            shutil.rmtree(self.temp_dir)
+            
+            self.update_completed.emit()
             return True
+            
         except Exception as e:
-            error_msg = f"Ошибка при загрузке обновления: {str(e)}"
+            error_msg = f"Ошибка при обновлении: {str(e)}"
             print(f"[ERROR] {error_msg}")
             self.update_error.emit(error_msg)
+            
+            # В случае ошибки пытаемся восстановить файлы из бэкапа
+            try:
+                if os.path.exists(backup_dir):
+                    for root, _, files in os.walk(backup_dir):
+                        for file in files:
+                            backup_file = os.path.join(root, file)
+                            relative_path = os.path.relpath(backup_file, backup_dir)
+                            target_file = os.path.join(self.app_root, relative_path)
+                            os.makedirs(os.path.dirname(target_file), exist_ok=True)
+                            shutil.copy2(backup_file, target_file)
+            except Exception as restore_error:
+                print(f"[ERROR] Failed to restore backup: {str(restore_error)}")
+            
             return False
+    
+    def _calculate_file_hash(self, file_path):
+        """Вычисляет SHA256 хеш файла"""
+        sha256_hash = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
     
     def _compare_versions(self, version1, version2):
         """Сравнение версий. Возвращает:

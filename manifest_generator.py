@@ -3,10 +3,11 @@ import json
 import hashlib
 from datetime import datetime
 from typing import List, Dict
+from version import VERSION
 
 class ManifestGenerator:
-    def __init__(self, version: str, base_url: str, project_dir: str = None):
-        self.version = version
+    def __init__(self, base_url: str, project_dir: str = None):
+        self.version = VERSION  # Берем версию из version.py
         self.base_url = base_url.rstrip('/')
         # Используем указанную директорию проекта или текущую директорию
         self.root_dir = project_dir if project_dir else os.path.dirname(os.path.abspath(__file__))
@@ -65,8 +66,29 @@ class ManifestGenerator:
         
         return files_info
     
+    def _get_required_version(self) -> str:
+        """
+        Определяет минимальную требуемую версию для обновления.
+        По умолчанию это текущая версия минус 0.0.1
+        """
+        try:
+            current_parts = [int(x) for x in self.version.split('.')]
+            if current_parts[-1] > 0:
+                current_parts[-1] -= 1
+            elif len(current_parts) > 1 and current_parts[-2] > 0:
+                current_parts[-2] -= 1
+                current_parts[-1] = 99
+            elif len(current_parts) > 2 and current_parts[-3] > 0:
+                current_parts[-3] -= 1
+                current_parts[-2] = 99
+                current_parts[-1] = 99
+            else:
+                return "0.0.0"
+            return ".".join(str(x) for x in current_parts)
+        except:
+            return "0.0.0"
+    
     def generate_manifest(self, 
-                         required_version: str,
                          description: str,
                          include_patterns: List[str] = [".py", ".json", ".bat"],
                          exclude_patterns: List[str] = ["__pycache__", ".git", "temp", "backup", "updates"]) -> Dict:
@@ -75,46 +97,67 @@ class ManifestGenerator:
             "version": self.version,
             "release_date": datetime.now().strftime("%Y-%m-%d"),
             "files": self._get_files_info(include_patterns, exclude_patterns),
-            "required_version": required_version,
+            "required_version": self._get_required_version(),
             "description": description
         }
         return manifest
     
-    def save_manifest(self, manifest: Dict, output_filename: str = "update_manifest.json"):
+    def save_manifest(self, manifest: Dict, output_filename: str = None):
         """Сохраняет манифест в файл"""
+        if output_filename is None:
+            output_filename = f"update_manifest_{self.version}.json"
+            
         output_path = os.path.join(self.output_dir, output_filename)
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(manifest, f, indent=4, ensure_ascii=False)
         return output_path
             
 def main():
-    # Путь к директории проекта
-    project_dir = r"C:\ProjectManager5\BProjectManager"
+    import argparse
     
-    # Пример использования
+    parser = argparse.ArgumentParser(description='Генератор манифеста обновлений')
+    parser.add_argument('--base-url', 
+                       default="https://github.com/BufBuf1421/BProjectManager/releases/download",
+                       help='Базовый URL для загрузки файлов')
+    parser.add_argument('--project-dir',
+                       default=os.path.dirname(os.path.abspath(__file__)),
+                       help='Путь к директории проекта')
+    parser.add_argument('--description',
+                       default="Обновление включает исправления багов и улучшения производительности",
+                       help='Описание обновления')
+    parser.add_argument('--include',
+                       default=[".py", ".json", ".bat"],
+                       nargs='+',
+                       help='Паттерны для включения файлов')
+    parser.add_argument('--exclude',
+                       default=["__pycache__", ".git", "temp", "backup", "test", "updates", "manifest_generator.py"],
+                       nargs='+',
+                       help='Паттерны для исключения файлов')
+    
+    args = parser.parse_args()
+    
+    print(f"Текущая версия приложения: {VERSION}")
+    print(f"Генерация манифеста обновления...")
+    
     generator = ManifestGenerator(
-        version="1.0.0",
-        base_url="https://github.com/BufBuf1421/BProjectManager/releases/download",
-        project_dir=project_dir
+        base_url=args.base_url,
+        project_dir=args.project_dir
     )
     
     manifest = generator.generate_manifest(
-        required_version="0.9.0",
-        description="Обновление включает исправления багов и улучшения производительности",
-        include_patterns=[".py", ".json", ".bat"],  # Файлы для включения
-        exclude_patterns=[
-            "__pycache__", 
-            ".git", 
-            "temp", 
-            "backup", 
-            "test",
-            "updates",
-            "manifest_generator.py"  # Исключаем сам генератор из манифеста
-        ]
+        description=args.description,
+        include_patterns=args.include,
+        exclude_patterns=args.exclude
     )
     
     output_path = generator.save_manifest(manifest)
-    print("Манифест обновления создан: {}".format(output_path))
+    print(f"\nМанифест обновления создан: {output_path}")
+    print(f"Версия: {manifest['version']}")
+    print(f"Минимальная требуемая версия: {manifest['required_version']}")
+    print(f"Количество файлов: {len(manifest['files'])}")
+    print("\nФайлы для обновления:")
+    for file in manifest['files']:
+        print(f"  - {file['path']} ({file['size']} байт)")
 
 if __name__ == "__main__":
     main() 
