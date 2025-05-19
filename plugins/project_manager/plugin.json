@@ -1,0 +1,11 @@
+{
+    "name": "project_manager",
+    "type": "python",
+    "load": ["__init__", "start_plugin"],
+    "description": "Плагин для автоматического сохранения проектов",
+    "url": "",
+    "version": "1.0.0",
+    "license": "MIT",
+    "author": "ProjectManager",
+    "min_api_version": "1.0.0"
+} 

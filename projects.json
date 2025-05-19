@@ -1,0 +1,57 @@
+{
+    "projects": [
+        {
+            "created": 1747506465.7010305,
+            "favorite": false,
+            "name": "\u041f\u0440\u043e\u0435\u043a\u04424",
+            "path": "C:/Users/bukha/Documents/Projects5\\\u041f\u0440\u043e\u0435\u043a\u04424"
+        },
+        {
+            "created": 1747506459.0452244,
+            "name": "\u041f\u0440\u043e\u0435\u043a\u04423",
+            "path": "C:/Users/bukha/Documents/Projects5\\\u041f\u0440\u043e\u0435\u043a\u04423"
+        },
+        {
+            "created": 1747506450.362373,
+            "name": "\u041f\u0440\u043e\u0435\u043a\u04421",
+            "path": "C:/Users/bukha/Documents/Projects5\\\u041f\u0440\u043e\u0435\u043a\u04421"
+        },
+        {
+            "created": 1747496055.1837182,
+            "favorite": false,
+            "name": "\u0444\u044b\u0432",
+            "path": "C:/Users/bukha/Documents/Projects5\\\u0444\u044b\u0432"
+        },
+        {
+            "name": "\u041f\u0440\u043e\u0435\u043a\u04421",
+            "path": "C:/Users/bukha/Documents/Projects5/\u041f\u0440\u043e\u0435\u043a\u04421",
+            "created": 1747506450.362373,
+            "favorite": false
+        },
+        {
+            "name": "\u041f\u0440\u043e\u0435\u043a\u04422",
+            "path": "C:/Users/bukha/Documents/Projects5/\u041f\u0440\u043e\u0435\u043a\u04422",
+            "created": 1747506455.273472,
+            "favorite": false
+        },
+        {
+            "name": "\u041f\u0440\u043e\u0435\u043a\u04423",
+            "path": "C:/Users/bukha/Documents/Projects5/\u041f\u0440\u043e\u0435\u043a\u04423",
+            "created": 1747506459.0452244,
+            "favorite": false
+        },
+        {
+            "name": "\u041f\u0440\u043e\u0435\u043a\u04424",
+            "path": "C:/Users/bukha/Documents/Projects5/\u041f\u0440\u043e\u0435\u043a\u04424",
+            "created": 1747506465.7010305,
+            "favorite": false
+        },
+        {
+            "name": "\u0444\u044b\u0432",
+            "path": "C:/Users/bukha/Documents/Projects5/\u0444\u044b\u0432",
+            "created": 1747496055.1837182,
+            "favorite": false
+        }
+    ],
+    "groups": {}
+}
