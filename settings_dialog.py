@@ -146,68 +146,82 @@ class SettingsDialog(QDialog):
     
     def check_for_updates(self):
         """Проверка обновлений"""
-        self.check_updates_btn.setEnabled(False)
-        self.check_updates_btn.setText("Проверка обновлений...")
-        self.status_label.setText("Проверка обновлений...")
-        self.status_label.show()
-        
-        has_update, version, manifest_url = self.update_manager.check_for_updates()
-        
-        if has_update:
-            reply = QMessageBox.question(
-                self,
-                "Доступно обновление",
-                f"Доступна новая версия {version}. Хотите обновить приложение?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
+        try:
+            self.check_updates_btn.setEnabled(False)
+            self.check_updates_btn.setText("Проверка обновлений...")
+            self.status_label.setText("Проверка обновлений...")
+            self.status_label.show()
             
-            if reply == QMessageBox.StandardButton.Yes:
-                self.progress_bar.show()
-                self.progress_bar.setValue(0)
-                success = self.update_manager.download_and_apply_update(manifest_url)
-                if not success:
-                    QMessageBox.critical(
-                        self,
-                        "Ошибка обновления",
-                        "Не удалось установить обновление. Проверьте лог для деталей."
-                    )
-        else:
-            QMessageBox.information(
+            has_update, version, download_url = self.update_manager.check_for_updates()
+            
+            if has_update and version and download_url:
+                reply = QMessageBox.question(
+                    self,
+                    "Доступно обновление",
+                    f"Доступна новая версия {version}. Хотите обновить приложение?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                
+                if reply == QMessageBox.StandardButton.Yes:
+                    self.progress_bar.show()
+                    self.progress_bar.setValue(0)
+                    success = self.update_manager.download_and_apply_update(download_url)
+                    if not success:
+                        QMessageBox.critical(
+                            self,
+                            "Ошибка обновления",
+                            "Не удалось установить обновление. Проверьте лог для деталей."
+                        )
+            else:
+                QMessageBox.information(
+                    self,
+                    "Обновление не требуется",
+                    "У вас установлена последняя версия приложения."
+                )
+        except Exception as e:
+            QMessageBox.critical(
                 self,
-                "Обновление не требуется",
-                "У вас установлена последняя версия приложения."
+                "Ошибка",
+                f"Произошла ошибка при проверке обновлений:\n{str(e)}"
             )
-        
-        self.check_updates_btn.setEnabled(True)
-        self.check_updates_btn.setText("Проверить обновления")
-        self.status_label.hide()
-        self.progress_bar.hide()
+        finally:
+            self.check_updates_btn.setEnabled(True)
+            self.check_updates_btn.setText("Проверить обновления")
+            self.status_label.hide()
+            self.progress_bar.hide()
     
     def on_update_available(self, version):
         """Обработчик сигнала о доступности обновления"""
         self.status_label.setText(f"Доступно обновление: {version}")
         self.status_label.show()
     
-    def on_update_progress(self, progress, message):
+    def on_update_progress(self, progress):
         """Обработчик сигнала о прогрессе обновления"""
         self.progress_bar.setValue(progress)
-        self.status_label.setText(message)
+        if not self.progress_bar.isVisible():
+            self.progress_bar.show()
     
     def on_update_error(self, error):
         """Обработчик сигнала об ошибке обновления"""
         self.status_label.setText(f"Ошибка: {error}")
         self.status_label.show()
+        self.progress_bar.hide()
         QMessageBox.critical(self, "Ошибка", error)
+        self.check_updates_btn.setEnabled(True)
+        self.check_updates_btn.setText("Проверить обновления")
     
     def on_update_completed(self):
         """Обработчик сигнала о завершении обновления"""
-        self.status_label.setText("Обновление успешно установлено. Перезапустите приложение.")
+        self.status_label.setText("Обновление успешно установлено")
         self.status_label.show()
+        self.progress_bar.hide()
+        
         QMessageBox.information(
             self,
             "Обновление установлено",
             "Обновление успешно установлено. Приложение будет перезапущено."
         )
+        
         # Перезапускаем приложение
         python = sys.executable
         os.execl(python, python, *sys.argv) 
