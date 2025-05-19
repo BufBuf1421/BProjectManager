@@ -18,70 +18,111 @@ class Updater(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.current_version = VERSION
-        self.github_api_url = "https://api.github.com/repos/BufBuf1421/BProjectManager/releases/latest"
+        self.github_api_base = "https://api.github.com/repos/BufBuf1421/BProjectManager"
+        self.github_raw_base = "https://raw.githubusercontent.com/BufBuf1421/BProjectManager"
         self.app_root = get_app_root()
         self.temp_dir = get_temp_dir()
         self.backup_dir = get_backup_dir()
         print(f"[DEBUG] Updater initialized with current version: {self.current_version}")
     
+    def _get_latest_version_from_github(self):
+        """Получает последнюю версию из version.py в репозитории"""
+        try:
+            # Сначала получаем информацию о последней версии в main ветке
+            headers = {'User-Agent': 'BProjectManager-Updater'}
+            
+            # Получаем последний коммит в main ветке
+            branches_url = f"{self.github_api_base}/branches/main"
+            branch_response = requests.get(branches_url, headers=headers)
+            if branch_response.status_code != 200:
+                raise Exception(f"Failed to get branch info: HTTP {branch_response.status_code}")
+            
+            # Получаем содержимое version.py из последнего коммита
+            version_url = f"{self.github_raw_base}/main/BProjectManager/version.py"
+            version_response = requests.get(version_url, headers=headers)
+            if version_response.status_code != 200:
+                raise Exception(f"Failed to get version.py: HTTP {version_response.status_code}")
+            
+            # Извлекаем версию из содержимого файла
+            version_content = version_response.text
+            version_line = version_content.strip()
+            if version_line.startswith('VERSION = "') and version_line.endswith('"'):
+                latest_version = version_line[len('VERSION = "'):-1]
+                print(f"[DEBUG] Found version in repository: {latest_version}")
+                return latest_version
+            else:
+                raise Exception("Invalid version.py format")
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to get latest version: {str(e)}")
+            raise
+    
     def check_for_updates(self):
         """Проверка наличия обновлений"""
         try:
-            print(f"[DEBUG] Checking for updates at: {self.github_api_url}")
-            # Добавляем заголовок User-Agent для GitHub API
-            headers = {'User-Agent': 'BProjectManager-Updater'}
-            response = requests.get(self.github_api_url, headers=headers)
-            print(f"[DEBUG] Response status code: {response.status_code}")
+            print(f"[DEBUG] Checking for updates in repository")
             
-            if response.status_code == 200:
+            try:
+                latest_version = self._get_latest_version_from_github()
+            except Exception as e:
+                print(f"[DEBUG] Failed to get version from repository, falling back to releases")
+                # Если не удалось получить версию из файла, пробуем получить из релизов
+                headers = {'User-Agent': 'BProjectManager-Updater'}
+                response = requests.get(f"{self.github_api_base}/releases/latest", headers=headers)
+                if response.status_code != 200:
+                    raise Exception(f"Failed to get releases: HTTP {response.status_code}")
                 release_info = response.json()
                 latest_version = release_info['tag_name'].lstrip('v')
-                print(f"[DEBUG] Latest version from GitHub: {latest_version}")
-                print(f"[DEBUG] Current installed version: {self.current_version}")
+            
+            print(f"[DEBUG] Latest version from GitHub: {latest_version}")
+            print(f"[DEBUG] Current installed version: {self.current_version}")
+            
+            # Преобразуем версии в числа для сравнения
+            current_parts = [int(x) for x in self.current_version.split('.')]
+            latest_parts = [int(x) for x in latest_version.split('.')]
+            
+            # Дополняем версии нулями, если разной длины
+            while len(current_parts) < len(latest_parts):
+                current_parts.append(0)
+            while len(latest_parts) < len(current_parts):
+                latest_parts.append(0)
+            
+            # Сравниваем версии
+            is_update_available = False
+            for current, latest in zip(current_parts, latest_parts):
+                if latest > current:
+                    is_update_available = True
+                    break
+                elif latest < current:
+                    break
+            
+            print(f"[DEBUG] Update available: {is_update_available}")
+            
+            if is_update_available:
+                # Получаем информацию о последнем релизе для загрузки манифеста
+                headers = {'User-Agent': 'BProjectManager-Updater'}
+                response = requests.get(f"{self.github_api_base}/releases/latest", headers=headers)
+                if response.status_code != 200:
+                    raise Exception(f"Failed to get releases: HTTP {response.status_code}")
                 
-                # Преобразуем версии в числа для сравнения
-                current_parts = [int(x) for x in self.current_version.split('.')]
-                latest_parts = [int(x) for x in latest_version.split('.')]
-                
-                # Дополняем версии нулями, если разной длины
-                while len(current_parts) < len(latest_parts):
-                    current_parts.append(0)
-                while len(latest_parts) < len(current_parts):
-                    latest_parts.append(0)
-                
-                # Сравниваем версии
-                is_update_available = False
-                for current, latest in zip(current_parts, latest_parts):
-                    if latest > current:
-                        is_update_available = True
+                release_info = response.json()
+                # Ищем манифест в ассетах
+                manifest_url = None
+                for asset in release_info['assets']:
+                    if asset['name'].startswith('update_manifest_') and asset['name'].endswith('.json'):
+                        manifest_url = asset['browser_download_url']
                         break
-                    elif latest < current:
-                        break
                 
-                print(f"[DEBUG] Update available: {is_update_available}")
+                if not manifest_url:
+                    raise Exception("Manifest file not found in release assets")
+                    
+                print(f"[DEBUG] Found manifest URL: {manifest_url}")
+                self.update_available.emit(latest_version)
+                return True, latest_version, manifest_url
                 
-                if is_update_available:
-                    # Ищем манифест в ассетах
-                    manifest_url = None
-                    for asset in release_info['assets']:
-                        if asset['name'].startswith('update_manifest_') and asset['name'].endswith('.json'):
-                            manifest_url = asset['browser_download_url']
-                            break
-                    
-                    if not manifest_url:
-                        raise Exception("Manifest file not found in release assets")
-                        
-                    print(f"[DEBUG] Found manifest URL: {manifest_url}")
-                    self.update_available.emit(latest_version)
-                    return True, latest_version, manifest_url
-                    
-                print("[DEBUG] No update needed - current version is up to date")
-                return False, None, None
-            else:
-                error_msg = f"Ошибка при проверке обновлений: {response.status_code}"
-                print(f"[ERROR] {error_msg}")
-                self.update_error.emit(error_msg)
-                return False, None, None
+            print("[DEBUG] No update needed - current version is up to date")
+            return False, None, None
+            
         except Exception as e:
             error_msg = f"Ошибка при проверке обновлений: {str(e)}"
             print(f"[ERROR] {error_msg}")
