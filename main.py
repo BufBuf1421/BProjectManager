@@ -187,7 +187,49 @@ class MainWindow(QMainWindow):
     
     def show_settings(self):
         dialog = SettingsDialog(self)
+        dialog.settings_changed.connect(self.on_settings_changed)
         dialog.exec()
+    
+    def on_settings_changed(self, settings):
+        """Обработчик изменения настроек"""
+        # Перезагружаем проекты при изменении пути к проектам
+        self.reload_projects()
+    
+    def reload_projects(self):
+        """Перезагружает все карточки проектов"""
+        # Удаляем все существующие карточки
+        while self.all_projects_layout.count():
+            item = self.all_projects_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # Очищаем избранное
+        while self.favorites_layout.count():
+            item = self.favorites_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # Очищаем группы
+        self.project_groups.clear()
+        
+        # Загружаем проекты заново
+        try:
+            if os.path.exists('projects.json'):
+                with open('projects.json', 'r') as f:
+                    projects_data = json.load(f)
+                    
+                    # Загружаем отдельные проекты
+                    for project in projects_data.get('projects', []):
+                        self.add_project(project)
+                    
+                    # Загружаем группы
+                    for group_data in projects_data.get('groups', []):
+                        self.create_project_group(group_data['name'], group_data['projects'])
+        except Exception as e:
+            print(f"Error reloading projects: {e}")
+        
+        # Обновляем сетку
+        self.update_grid_layout()
     
     def show_create_project_dialog(self):
         dialog = CreateProjectDialog(self)
