@@ -176,8 +176,10 @@ class SettingsDialog(QDialog):
             # Создаем bat-файл для обновления
             update_script = os.path.join(os.path.dirname(update_file), 'update.bat')
             ps_script = os.path.join(os.path.dirname(update_file), 'update.ps1')
-            app_path = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))  # Путь к корневой папке приложения
-            temp_extract_dir = os.path.join(os.path.dirname(update_file), 'temp_extract')
+            
+            # Определяем пути (используем абсолютные пути)
+            app_path = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
+            temp_extract_dir = os.path.abspath(os.path.join(os.path.dirname(update_file), 'temp_extract'))
             
             print(f"[DEBUG] Update file path: {update_file}")
             print(f"[DEBUG] App path: {app_path}")
@@ -202,8 +204,8 @@ class SettingsDialog(QDialog):
             except Exception as e:
                 raise PermissionError(f"Нет прав на запись в папку приложения: {app_path}. Запустите приложение от имени администратора.")
             
-            # Подготавливаем пути для PowerShell (используем прямые слеши для PowerShell)
-            ps_update_file = update_file.replace('\\', '/')
+            # Подготавливаем пути для PowerShell (используем прямые слеши)
+            ps_update_file = os.path.abspath(update_file).replace('\\', '/')
             ps_temp_dir = temp_extract_dir.replace('\\', '/')
             ps_app_path = app_path.replace('\\', '/')
             ps_launcher = os.path.join(app_path, "start_app.bat").replace('\\', '/')
@@ -246,7 +248,7 @@ class SettingsDialog(QDialog):
                 f.write('\n')
                 f.write('    Write-Host "Copying files to: $appPath"\n')
                 f.write('    # Получаем список всех файлов для обновления\n')
-                f.write('    $filesToUpdate = Get-ChildItem -Path $tempDir -Recurse | Where-Object { -not $_.PSIsContainer }\n')
+                f.write('    $filesToUpdate = Get-ChildItem -Path $tempDir -Recurse -File\n')
                 f.write('\n')
                 f.write('    if ($filesToUpdate.Count -eq 0) { throw "No files found to update" }\n')
                 f.write('\n')
@@ -255,7 +257,7 @@ class SettingsDialog(QDialog):
                 f.write('    foreach ($file in $filesToUpdate) {\n')
                 f.write('        $relativePath = $file.FullName.Substring($tempDir.Length + 1)\n')
                 f.write('        if ([string]::IsNullOrEmpty($relativePath)) { continue }\n')
-                f.write('        $targetPath = Join-Path $appPath $relativePath\n')
+                f.write('        $targetPath = Join-Path -Path $appPath -ChildPath $relativePath\n')
                 f.write('        if (Test-Path $targetPath) {\n')
                 f.write('            Write-Host "Removing: $relativePath"\n')
                 f.write('            Remove-Item -Path $targetPath -Force\n')
@@ -267,7 +269,7 @@ class SettingsDialog(QDialog):
                 f.write('    foreach ($file in $filesToUpdate) {\n')
                 f.write('        $relativePath = $file.FullName.Substring($tempDir.Length + 1)\n')
                 f.write('        if ([string]::IsNullOrEmpty($relativePath)) { continue }\n')
-                f.write('        $targetPath = Join-Path $appPath $relativePath\n')
+                f.write('        $targetPath = Join-Path -Path $appPath -ChildPath $relativePath\n')
                 f.write('        $targetDir = Split-Path -Parent $targetPath\n')
                 f.write('\n')
                 f.write('        # Создаем директорию, если её нет\n')
