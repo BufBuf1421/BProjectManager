@@ -3,53 +3,102 @@ import json
 import requests
 import hashlib
 import shutil
+import logging
 from datetime import datetime
-from version import VERSION
+from version import VERSION, APP_NAME, PUBLISHER, GITHUB_REPO, LAUNCHER_FILENAME
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtCore import QObject, pyqtSignal
 from app_paths import get_temp_dir, get_backup_dir, get_app_root
+
+# Настройка логирования
+def setup_logging():
+    log_dir = os.path.join(get_app_root(), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    log_file = os.path.join(log_dir, f'updater_{datetime.now().strftime("%Y%m%d")}.log')
+    
+    # Ротация логов (оставляем только последние 5 файлов)
+    log_files = sorted([f for f in os.listdir(log_dir) if f.startswith('updater_')])
+    while len(log_files) >= 5:
+        os.remove(os.path.join(log_dir, log_files[0]))
+        log_files = log_files[1:]
+    
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s [%(levelname)s] %(message)s',
+        handlers=[
+            logging.FileHandler(log_file, encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
 
 class Updater(QObject):
     update_available = pyqtSignal(str)  # Сигнал о доступности обновления
     update_progress = pyqtSignal(int)   # Сигнал прогресса загрузки
     update_error = pyqtSignal(str)      # Сигнал ошибки обновления
     update_completed = pyqtSignal()     # Сигнал завершения обновления
+    restart_required = pyqtSignal()     # Сигнал о необходимости перезапуска
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.current_version = VERSION  # Версия уже содержит префикс 'v'
-        self.github_api_url = "https://api.github.com/repos/BufBuf1421/BProjectManager/releases/latest"
-        print(f"[DEBUG] Updater initialized with current version: {self.current_version}")
+        self.current_version = VERSION
+        self.github_api_url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+        setup_logging()
+        logging.info(f"Updater initialized with version: {self.current_version}")
     
+    def calculate_file_hash(self, file_path):
+        """Вычисление SHA-256 хэша файла"""
+        sha256_hash = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
+
+    def verify_files(self, source_dir, manifest_path):
+        """Проверка хэшей файлов после обновления"""
+        try:
+            with open(manifest_path, 'r') as f:
+                manifest = json.load(f)
+            
+            for file_info in manifest['files']:
+                file_path = os.path.join(source_dir, file_info['path'])
+                if os.path.exists(file_path):
+                    actual_hash = self.calculate_file_hash(file_path)
+                    if actual_hash != file_info['hash']:
+                        logging.error(f"Hash mismatch for {file_info['path']}")
+                        return False
+                else:
+                    logging.error(f"File not found: {file_info['path']}")
+                    return False
+            return True
+        except Exception as e:
+            logging.error(f"Error verifying files: {str(e)}")
+            return False
+
     def check_for_updates(self):
         """Проверка наличия обновлений"""
         try:
-            print(f"[DEBUG] Checking for updates")
+            logging.info("Checking for updates")
             
-            # Получаем информацию о последнем релизе
-            headers = {'User-Agent': 'BProjectManager-Updater'}
+            headers = {'User-Agent': f'{APP_NAME}-Updater'}
             response = requests.get(self.github_api_url, headers=headers)
             if response.status_code != 200:
                 raise Exception(f"Failed to get releases: HTTP {response.status_code}")
             
             release_info = response.json()
-            latest_version = release_info['tag_name']  # Теперь используем версию с префиксом 'v'
+            latest_version = release_info['tag_name'].lstrip('v')
             
-            print(f"[DEBUG] Latest version from GitHub: {latest_version}")
-            print(f"[DEBUG] Current installed version: {self.current_version}")
-            print(f"[DEBUG] Release info: {release_info}")
+            logging.info(f"Latest version: {latest_version}")
+            logging.info(f"Current version: {self.current_version}")
             
-            # Преобразуем версии в числа для сравнения (убираем префикс 'v')
-            current_parts = [int(x) for x in self.current_version.lstrip('v').split('.')]
-            latest_parts = [int(x) for x in latest_version.lstrip('v').split('.')]
+            current_parts = [int(x) for x in self.current_version.split('.')]
+            latest_parts = [int(x) for x in latest_version.split('.')]
             
-            # Дополняем версии нулями, если разной длины
             while len(current_parts) < len(latest_parts):
                 current_parts.append(0)
             while len(latest_parts) < len(current_parts):
                 latest_parts.append(0)
             
-            # Сравниваем версии
             is_update_available = False
             for current, latest in zip(current_parts, latest_parts):
                 if latest > current:
@@ -59,59 +108,63 @@ class Updater(QObject):
                     break
             
             if is_update_available:
-                print(f"[DEBUG] Update available: {latest_version}")
+                logging.info(f"Update available: {latest_version}")
                 self.update_available.emit(latest_version)
                 
-                # Проверяем наличие ассетов
-                if 'assets' not in release_info or not isinstance(release_info['assets'], list):
-                    print("[DEBUG] No assets field found in release info")
-                    error_msg = f"Доступно обновление {latest_version}, но структура релиза некорректна. Попробуйте позже."
-                    self.update_error.emit(error_msg)
-                    return False, latest_version, None
-                    
-                print(f"[DEBUG] Found {len(release_info['assets'])} assets")
-                if len(release_info['assets']) == 0:
-                    print("[DEBUG] Assets list is empty, using source code archive")
+                if 'assets' not in release_info or not release_info['assets']:
+                    logging.warning("No assets found in release")
                     if 'zipball_url' in release_info:
                         download_url = release_info['zipball_url']
-                        print(f"[DEBUG] Using zipball URL: {download_url}")
                         return True, latest_version, download_url
                     else:
-                        print("[DEBUG] No zipball URL found")
-                        error_msg = f"Доступно обновление {latest_version}, но файлы обновления недоступны. Попробуйте позже."
+                        error_msg = f"Доступно обновление {latest_version}, но файлы недоступны"
                         self.update_error.emit(error_msg)
                         return False, latest_version, None
                 
                 download_url = release_info['assets'][0]['browser_download_url']
-                print(f"[DEBUG] Download URL: {download_url}")
                 return True, latest_version, download_url
             else:
-                print("[DEBUG] No updates available")
+                logging.info("No updates available")
                 return False, None, None
                 
         except Exception as e:
             error_msg = f"Ошибка при проверке обновлений: {str(e)}"
-            print(f"[ERROR] {error_msg}")
+            logging.error(error_msg)
             self.update_error.emit(error_msg)
             return False, None, None
     
+    def create_backup(self, app_dir, backup_dir):
+        """Создание резервной копии"""
+        try:
+            backup_path = os.path.join(backup_dir, f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+            logging.info(f"Creating backup at: {backup_path}")
+            
+            if os.path.exists(app_dir):
+                shutil.copytree(app_dir, backup_path, ignore=shutil.ignore_patterns(
+                    'python', 'backups', '.temp_*', 'settings.json', '__pycache__', 'logs'
+                ))
+            return backup_path
+        except Exception as e:
+            logging.error(f"Error creating backup: {str(e)}")
+            raise
+
     def download_and_apply_update(self, download_url):
         """Загрузка и применение обновления"""
         try:
-            print(f"[DEBUG] Starting update download from {download_url}")
+            logging.info(f"Starting update download from {download_url}")
             
-            # Создаем временную директорию
             temp_dir = get_temp_dir()
-            os.makedirs(temp_dir, exist_ok=True)
+            backup_dir = get_backup_dir()
+            update_dir = os.path.join(temp_dir, f"update_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+            os.makedirs(update_dir, exist_ok=True)
             
-            # Загружаем архив
-            headers = {'User-Agent': 'BProjectManager-Updater'}
+            # Загрузка архива
+            headers = {'User-Agent': f'{APP_NAME}-Updater'}
             response = requests.get(download_url, stream=True, headers=headers)
             if response.status_code != 200:
                 raise Exception(f"Failed to download update: HTTP {response.status_code}")
-                
-            # Сохраняем архив
-            zip_path = os.path.join(temp_dir, "update.zip")
+            
+            zip_path = os.path.join(update_dir, "update.zip")
             total_size = int(response.headers.get('content-length', 0))
             block_size = 8192
             downloaded = 0
@@ -123,52 +176,84 @@ class Updater(QObject):
                     if total_size:
                         progress = int((downloaded / total_size) * 100)
                         self.update_progress.emit(progress)
-                
-            print("[DEBUG] Download completed successfully")
             
-            # Распаковываем архив
+            logging.info("Download completed")
+            
+            # Распаковка и подготовка файлов
             import zipfile
-            extract_dir = os.path.join(temp_dir, "extracted")
+            extract_dir = os.path.join(update_dir, "extracted")
             os.makedirs(extract_dir, exist_ok=True)
             
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 zip_ref.extractall(extract_dir)
             
-            print("[DEBUG] Archive extracted successfully")
+            # Создание бэкапа
+            app_dir = get_app_root()
+            backup_path = self.create_backup(app_dir, backup_dir)
             
-            # Находим корневую директорию в распакованном архиве
-            extracted_contents = os.listdir(extract_dir)
-            if len(extracted_contents) == 0:
-                raise Exception("Extracted archive is empty")
+            # Подготовка новых файлов
+            staged_dir = os.path.join(update_dir, "staged")
+            os.makedirs(staged_dir, exist_ok=True)
             
-            source_dir = os.path.join(extract_dir, extracted_contents[0])
+            source_dir = os.path.join(extract_dir, os.listdir(extract_dir)[0])
             if not os.path.isdir(source_dir):
                 source_dir = extract_dir
             
-            print(f"[DEBUG] Source directory: {source_dir}")
-            
-            # Копируем файлы в целевую директорию
-            app_dir = get_app_root()
-            print(f"[DEBUG] Target directory: {app_dir}")
-            
-            # Копируем все файлы, кроме settings.json и других конфигурационных файлов
+            # Копирование новых файлов
             for item in os.listdir(source_dir):
-                s = os.path.join(source_dir, item)
-                d = os.path.join(app_dir, item)
-                if item not in ['settings.json']:
+                if item not in ['settings.json', 'python', 'backups', '.temp_*', '__pycache__', 'logs']:
+                    s = os.path.join(source_dir, item)
+                    d = os.path.join(staged_dir, item)
                     if os.path.isfile(s):
                         shutil.copy2(s, d)
                     elif os.path.isdir(s):
-                        if os.path.exists(d):
-                            shutil.rmtree(d)
                         shutil.copytree(s, d)
             
-            print("[DEBUG] Files copied successfully")
+            # Проверка хэшей файлов
+            manifest_path = os.path.join(source_dir, 'update_manifest.json')
+            if os.path.exists(manifest_path):
+                if not self.verify_files(staged_dir, manifest_path):
+                    raise Exception("File verification failed")
+            
+            # Создание информации об обновлении
+            update_info = {
+                'staged_dir': staged_dir,
+                'backup_path': backup_path,
+                'version': self.current_version,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            with open(os.path.join(update_dir, 'update_info.json'), 'w') as f:
+                json.dump(update_info, f, indent=4)
+            
+            # Создание скрипта завершения обновления
+            finish_update_bat = os.path.join(update_dir, 'finish_update.bat')
+            with open(finish_update_bat, 'w', encoding='utf-8') as f:
+                f.write('@echo off\n')
+                f.write('chcp 65001>nul\n')
+                f.write('echo Завершение обновления...\n')
+                f.write(f'xcopy /y /s /e "{staged_dir}\\*" "{app_dir}\\"\n')
+                f.write('if errorlevel 1 (\n')
+                f.write('    echo Ошибка при обновлении!\n')
+                f.write(f'    echo Восстанавливаем файлы из резервной копии: {backup_path}\n')
+                f.write(f'    xcopy /y /s /e "{backup_path}\\*" "{app_dir}\\"\n')
+                f.write('    pause\n')
+                f.write('    exit /b 1\n')
+                f.write(')\n')
+                f.write(f'rmdir /s /q "{update_dir}"\n')
+                f.write('echo Обновление успешно завершено\n')
+                f.write(f'start "" "{app_dir}\\{LAUNCHER_FILENAME}"\n')
+                f.write('exit\n')
+            
+            logging.info("Update prepared successfully")
             self.update_completed.emit()
+            self.restart_required.emit()
+            
+            os.startfile(finish_update_bat)
             return True
             
         except Exception as e:
-            error_msg = f"Ошибка при загрузке обновления: {str(e)}"
-            print(f"[ERROR] {error_msg}")
+            error_msg = f"Ошибка при обновлении: {str(e)}"
+            logging.error(error_msg)
             self.update_error.emit(error_msg)
             return False

@@ -1,0 +1,176 @@
+{
+    "version": "0.1.66",
+    "generated_date": "2025-05-21T20:44:29.901194",
+    "files": [
+        {
+            "path": "app_paths.py",
+            "hash": "2ba8fe5eb22c32852876c6415057017cab0a8fad6ddeb7aa233e888c97f5cf64",
+            "size": 7723
+        },
+        {
+            "path": "blender_addon.py",
+            "hash": "f9a88d753c5881ff99e5e03a0a17fcfb6ea00bd1fd4664d82546fd53538e39f8",
+            "size": 14098
+        },
+        {
+            "path": "create_project_dialog.py",
+            "hash": "e819d77146c6c581ddcf924b15ecb3ccb7e567d8218d41e4bd94b06db614232c",
+            "size": 3225
+        },
+        {
+            "path": "icons/BPM_icon.png",
+            "hash": "b2d77500117e25d62dcae7c442af809ae97ea85e8fd8fadd6f5ab1b73b72f2f0",
+            "size": 228775
+        },
+        {
+            "path": "icons/add.png",
+            "hash": "54d8ba63a195bf4d339841ed66fed48d0fc6d538181dd6e340b568be7c61b826",
+            "size": 26197
+        },
+        {
+            "path": "icons/app_icon.ico",
+            "hash": "9a41f141dcc6a6dd5aacb3fe02f35a45acde18b7e091cd098d4b78921c8f60e4",
+            "size": 81397
+        },
+        {
+            "path": "icons/archive.png",
+            "hash": "c3ac718b4123b0bdf22d68d1ebe48846e5ca567e4bb09d322aa88a82a17f533c",
+            "size": 3901
+        },
+        {
+            "path": "icons/blend.png",
+            "hash": "c19d86f0ce8936a7a568a59fbd66c30994612af05479e9b2d1063e0810244488",
+            "size": 18335
+        },
+        {
+            "path": "icons/checkbox-checked.png",
+            "hash": "9efe74e3c752027895c9f8c186dc92c614a9d91e5b0c2c03b9765ca4520447e1",
+            "size": 242
+        },
+        {
+            "path": "icons/checkbox-checked.svg",
+            "hash": "2d4dc19b3bf3d74154277352b5c4f20746bf59affc260bae4de60465d2ea4819",
+            "size": 368
+        },
+        {
+            "path": "icons/checkbox-unchecked.png",
+            "hash": "f00d5659d0742849d574fbebe50b5dba930e388c7cef143d3ce8c8b70d30f009",
+            "size": 158
+        },
+        {
+            "path": "icons/checkbox-unchecked.svg",
+            "hash": "b1ced753b3c841ddd89fd248fe44cf367eac1f32b15de90d1ac078c0a2479d74",
+            "size": 238
+        },
+        {
+            "path": "icons/down-arrow.png",
+            "hash": "e779560a60bc25d25fb77e2078b8db1fca525a48b3351003c384328c70117f79",
+            "size": 146
+        },
+        {
+            "path": "icons/down-arrow.svg",
+            "hash": "719d1fa6eec490ec0ad155d653c60a5119baf70fc376d49ac959da99a2c1f5c1",
+            "size": 260
+        },
+        {
+            "path": "icons/expand.png",
+            "hash": "5e2377e731b530bf2ae092e576e08e80a593f14d522a8c8ea6113da50bac25d4",
+            "size": 6291
+        },
+        {
+            "path": "icons/file.png",
+            "hash": "78579d99cd4d540520d470fca5386e9799679513114fb9ef446fb28913b90cbf",
+            "size": 6999
+        },
+        {
+            "path": "icons/folder.png",
+            "hash": "5505958b22b8fbd02951ced398abb3a28851ff86952caaba11c5ccd077954477",
+            "size": 4538
+        },
+        {
+            "path": "icons/image.png",
+            "hash": "d1c652d56971aeed72ffd391b7ed493a2cbbb26b00c557e7b486f0849f73f4f4",
+            "size": 5896
+        },
+        {
+            "path": "icons/model.png",
+            "hash": "27ac95dae005f15d22094bf01b45232f7387fb6365eaa21645c60f6405f8557a",
+            "size": 10538
+        },
+        {
+            "path": "icons/open-folder.png",
+            "hash": "7feb8ce9e46a5a079f3f2499775196ba2e95e7518e8d6b2a5632cb218a669947",
+            "size": 8468
+        },
+        {
+            "path": "icons/pdf.png",
+            "hash": "7d1a2d1f9cf888e2b7061af3acd37d142f97f06afdb749f4835f6ba93eeefeec",
+            "size": 8903
+        },
+        {
+            "path": "icons/substance.png",
+            "hash": "a9d59d4f0d644089450b10f16cb89a62dccd5ef39576c3687b6bb56ef393573a",
+            "size": 11744
+        },
+        {
+            "path": "icons/text.png",
+            "hash": "7ed2860ea8b05e0ea7b1ca05e78ff416f62c291f44a769f3740d061eda23f1f0",
+            "size": 7532
+        },
+        {
+            "path": "launcher.bat",
+            "hash": "174d714645d07d0d74117be48dd34b151a686fd399a51347d1ff3cc82d757876",
+            "size": 498
+        },
+        {
+            "path": "main.py",
+            "hash": "01ec092c65ca961933598679099655063d8dbe0de7a3fa7c73eb072c7f60ed32",
+            "size": 35092
+        },
+        {
+            "path": "project_card.py",
+            "hash": "7b728a20e9fa988c936d24d0a6b22362bd0ce403b697bf3814f3464079e0db69",
+            "size": 25378
+        },
+        {
+            "path": "project_group.py",
+            "hash": "2f7e4383014aad5d8046b4455d9eeb787e276a83028f3b635a8053691530806e",
+            "size": 27554
+        },
+        {
+            "path": "project_window.py",
+            "hash": "4c894c2a9e059048bcddadb7ab2341fd53799c35c1a50e9621d42cb00e1245b2",
+            "size": 38104
+        },
+        {
+            "path": "search_panel.py",
+            "hash": "83b23c522d39cba6ae5925c2c6ffb4f46ba2d3f24efb4f715176cf11aaf06ecd",
+            "size": 4016
+        },
+        {
+            "path": "settings_dialog.py",
+            "hash": "9633067b1c0cde337bd8bad9ef7c0f670d6251b80a94ed32f00e03ccd32a4281",
+            "size": 10320
+        },
+        {
+            "path": "styles.py",
+            "hash": "61d2e0c78c92ccb94bf9a54c454bd58a83d93452c43384ddb5934ad222fb8387",
+            "size": 11340
+        },
+        {
+            "path": "updater.py",
+            "hash": "21587c4dd15a9a7b47215e7fdc42901b5631ff8414de0b5a258cfccbe4083724",
+            "size": 11906
+        },
+        {
+            "path": "verify_files.py",
+            "hash": "fb77c5a2b96004ffcf94d26fb335b249fb6d611e25fcbbb45b12569328ca52ff",
+            "size": 2733
+        },
+        {
+            "path": "version.py",
+            "hash": "8d15167af45233f432d550a6fa421b01c42ede04e6b3074f66638af2defede33",
+            "size": 221
+        }
+    ]
+}

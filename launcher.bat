@@ -1,36 +1,29 @@
 @echo off
 chcp 65001>nul
-setlocal EnableDelayedExpansion
 
-rem Change to application directory
 cd /d "%~dp0"
 
-rem Check Python existence
-if not exist "python\python.exe" (
-    echo Error: Python not found
-    echo Please reinstall the application
-    pause
-    exit /b 1
-)
+if not exist "python\python.exe" goto error_python
 
-rem Setup environment variables
-set "PYTHONPATH=%~dp0python\Lib\site-packages;%~dp0"
-set "PATH=%~dp0python;%PATH%"
-set "PYTHONHOME=%~dp0python"
+set PYTHONPATH=%~dp0python\Lib\site-packages;%~dp0
+set PATH=%~dp0python;%PATH%
+set PYTHONHOME=%~dp0python
+set PYTHONIOENCODING=utf-8
+set PYTHONUTF8=1
 
-rem Clean up temp directory if exists
-if exist "python\temp" (
-    echo Cleaning up temporary files...
-    rmdir /s /q "python\temp"
-)
+"%~dp0python\python.exe" main.py
+if errorlevel 1 goto error_run
+goto end
 
-rem Launch application
-echo Launching application...
-"python\python.exe" main.py
+:error_python
+echo Python not found. Please reinstall the application.
+pause
+exit /b 1
 
-if !errorlevel! neq 0 (
-    echo Error launching application
-    echo Error code: !errorlevel!
-    pause
-    exit /b !errorlevel!
-) 
+:error_run
+echo Application error. Error code: %errorlevel%
+pause
+exit /b 1
+
+:end
+exit /b 0 
