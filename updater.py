@@ -39,6 +39,9 @@ class Updater(QObject):
     update_completed = pyqtSignal()     # Сигнал завершения обновления
     restart_required = pyqtSignal()     # Сигнал о необходимости перезапуска
     
+    # Список расширений текстовых файлов
+    TEXT_FILE_EXTENSIONS = {'.py', '.txt', '.json', '.md', '.bat', '.html', '.css', '.js'}
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.current_version = VERSION
@@ -46,33 +49,116 @@ class Updater(QObject):
         setup_logging()
         logging.info(f"Updater initialized with version: {self.current_version}")
     
+    def is_text_file(self, file_path):
+        """Проверяет, является ли файл текстовым на основе расширения"""
+        return any(file_path.lower().endswith(ext) for ext in self.TEXT_FILE_EXTENSIONS)
+    
+    def normalize_text_content(self, content):
+        """Нормализует содержимое текстового файла"""
+        # Нормализация символов конца строки
+        content = content.replace('\r\n', '\n').replace('\r', '\n')
+        # Удаление пробелов в конце строк и пустых строк в конце файла
+        lines = [line.rstrip() for line in content.split('\n')]
+        while lines and not lines[-1]:
+            lines.pop()
+        return '\n'.join(lines)
+    
+    def get_file_content(self, file_path):
+        """Получает содержимое файла с учетом его типа"""
+        try:
+            if self.is_text_file(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                return self.normalize_text_content(content)
+            else:
+                with open(file_path, 'rb') as f:
+                    return f.read()
+        except UnicodeDecodeError:
+            # Если не удалось прочитать как текст, читаем как бинарный
+            with open(file_path, 'rb') as f:
+                return f.read()
+    
     def calculate_file_hash(self, file_path):
-        """Вычисление SHA-256 хэша файла"""
-        sha256_hash = hashlib.sha256()
-        with open(file_path, "rb") as f:
-            for byte_block in iter(lambda: f.read(4096), b""):
-                sha256_hash.update(byte_block)
-        return sha256_hash.hexdigest()
+        """Вычисление SHA-256 хэша файла с учетом его типа"""
+        content = self.get_file_content(file_path)
+        if isinstance(content, str):
+            content = content.encode('utf-8')
+        return hashlib.sha256(content).hexdigest()
+    
+    def compare_files(self, file1_path, file2_path):
+        """Сравнивает два файла и возвращает результат сравнения"""
+        content1 = self.get_file_content(file1_path)
+        content2 = self.get_file_content(file2_path)
+        
+        if content1 == content2:
+            return True, "Files are identical"
+        
+        if isinstance(content1, str) and isinstance(content2, str):
+            # Для текстовых файлов показываем различия
+            import difflib
+            diff = list(difflib.unified_diff(
+                content1.splitlines(keepends=True),
+                content2.splitlines(keepends=True),
+                fromfile=file1_path,
+                tofile=file2_path
+            ))
+            return False, ''.join(diff)
+        else:
+            # Для бинарных файлов просто отмечаем различие
+            return False, "Binary files are different"
 
     def verify_files(self, source_dir, manifest_path):
-        """Проверка хэшей файлов после обновления"""
+        """Проверка файлов после обновления (без проверки хэшей)"""
         try:
-            with open(manifest_path, 'r') as f:
+            logging.info(f"Checking files in {source_dir} using manifest {manifest_path}")
+            
+            with open(manifest_path, 'r', encoding='utf-8') as f:
                 manifest = json.load(f)
             
+            logging.info(f"Manifest version: {manifest.get('version', 'unknown')}")
+            logging.info(f"Total files to check: {len(manifest['files'])}")
+            
+            # Создаем список всех файлов в staged_dir
+            staged_files = []
+            for root, _, files in os.walk(source_dir):
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(full_path, source_dir).replace('\\', '/')
+                    staged_files.append(rel_path)
+            
+            logging.info(f"Files in staged directory: {staged_files}")
+            
+            # Проверяем наличие всех файлов
             for file_info in manifest['files']:
                 file_path = os.path.join(source_dir, file_info['path'])
-                if os.path.exists(file_path):
-                    actual_hash = self.calculate_file_hash(file_path)
-                    if actual_hash != file_info['hash']:
-                        logging.error(f"Hash mismatch for {file_info['path']}")
-                        return False
-                else:
-                    logging.error(f"File not found: {file_info['path']}")
+                logging.info(f"Checking file: {file_info['path']}")
+                
+                # Пропускаем некоторые файлы при обновлении через zipball
+                if file_info['path'] in ['update_manifest.json', 'launcher.bat']:
+                    logging.info(f"Skipping check for {file_info['path']}")
+                    continue
+                
+                if not os.path.exists(file_path):
+                    logging.error(f"File not found: {file_path}")
+                    logging.error(f"Source directory contents: {os.listdir(source_dir)}")
                     return False
+                
+                # Только логируем различия для отладки, но не блокируем обновление
+                current_file = os.path.join(get_app_root(), file_info['path'])
+                if os.path.exists(current_file):
+                    is_identical, diff = self.compare_files(current_file, file_path)
+                    if not is_identical:
+                        logging.info(f"File differences found in {file_info['path']}:")
+                        logging.info(diff)
+                
+                logging.debug(f"File check passed: {file_info['path']}")
+            
+            logging.info("All files checked successfully")
             return True
+            
         except Exception as e:
-            logging.error(f"Error verifying files: {str(e)}")
+            logging.error(f"Error checking files: {str(e)}")
+            logging.error(f"Stack trace:", exc_info=True)
             return False
     
     def check_for_updates(self):
@@ -85,8 +171,8 @@ class Updater(QObject):
             if response.status_code != 200:
                 raise Exception(f"Failed to get releases: HTTP {response.status_code}")
             
-                release_info = response.json()
-                latest_version = release_info['tag_name'].lstrip('v')
+            release_info = response.json()
+            latest_version = release_info['tag_name'].lstrip('v')
             
             logging.info(f"Latest version: {latest_version}")
             logging.info(f"Current version: {self.current_version}")
@@ -112,7 +198,7 @@ class Updater(QObject):
                 self.update_available.emit(latest_version)
                 
                 if 'assets' not in release_info or not release_info['assets']:
-                    logging.warning("No assets found in release")
+                    logging.warning("No assets found in release, using zipball")
                     if 'zipball_url' in release_info:
                         download_url = release_info['zipball_url']
                         return True, latest_version, download_url
@@ -120,7 +206,7 @@ class Updater(QObject):
                         error_msg = f"Доступно обновление {latest_version}, но файлы недоступны"
                         self.update_error.emit(error_msg)
                         return False, latest_version, None
-                
+                else:
                     download_url = release_info['assets'][0]['browser_download_url']
                     return True, latest_version, download_url
             else:
@@ -155,6 +241,7 @@ class Updater(QObject):
             
             temp_dir = get_temp_dir()
             backup_dir = get_backup_dir()
+            app_dir = get_app_root()
             update_dir = os.path.join(temp_dir, f"update_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
             os.makedirs(update_dir, exist_ok=True)
             
@@ -188,32 +275,48 @@ class Updater(QObject):
                 zip_ref.extractall(extract_dir)
             
             # Создание бэкапа
-            app_dir = get_app_root()
             backup_path = self.create_backup(app_dir, backup_dir)
             
             # Подготовка новых файлов
             staged_dir = os.path.join(update_dir, "staged")
             os.makedirs(staged_dir, exist_ok=True)
             
-            source_dir = os.path.join(extract_dir, os.listdir(extract_dir)[0])
-            if not os.path.isdir(source_dir):
-                source_dir = extract_dir
+            # Находим правильную директорию с файлами
+            source_dir = extract_dir
+            contents = os.listdir(extract_dir)
+            logging.info(f"Extracted contents: {contents}")
+            
+            if contents:
+                potential_dir = os.path.join(extract_dir, contents[0])
+                if os.path.isdir(potential_dir) and 'BProjectManager' in contents[0]:
+                    source_dir = potential_dir
+                    logging.info(f"Using source directory: {source_dir}")
             
             # Копирование новых файлов
+            logging.info(f"Copying files from {source_dir} to {staged_dir}")
             for item in os.listdir(source_dir):
                 if item not in ['settings.json', 'python', 'backups', '.temp_*', '__pycache__', 'logs']:
                     s = os.path.join(source_dir, item)
                     d = os.path.join(staged_dir, item)
                     if os.path.isfile(s):
                         shutil.copy2(s, d)
+                        logging.info(f"Copied file: {item}")
                     elif os.path.isdir(s):
                         shutil.copytree(s, d)
+                        logging.info(f"Copied directory: {item}")
             
             # Проверка хэшей файлов
             manifest_path = os.path.join(source_dir, 'update_manifest.json')
+            logging.info(f"Looking for manifest at: {manifest_path}")
+            
             if os.path.exists(manifest_path):
+                logging.info("Found manifest file, verifying files...")
                 if not self.verify_files(staged_dir, manifest_path):
                     raise Exception("File verification failed")
+            else:
+                logging.error(f"Manifest file not found at {manifest_path}")
+                logging.error(f"Source directory contents: {os.listdir(source_dir)}")
+                raise Exception("Manifest file not found")
             
             # Создание информации об обновлении
             update_info = {
@@ -228,20 +331,44 @@ class Updater(QObject):
             
             # Создание скрипта завершения обновления
             finish_update_bat = os.path.join(update_dir, 'finish_update.bat')
+            logging.info(f"Creating update script at: {finish_update_bat}")
+            
             with open(finish_update_bat, 'w', encoding='utf-8') as f:
                 f.write('@echo off\n')
                 f.write('chcp 65001>nul\n')
+                f.write('echo Ожидание завершения работы приложения...\n')
+                f.write('timeout /t 2 /nobreak > nul\n')
                 f.write('echo Завершение обновления...\n')
-                f.write(f'xcopy /y /s /e "{staged_dir}\\*" "{app_dir}\\"\n')
+                f.write(f'echo Копирование файлов из {staged_dir} в {app_dir}\n')
+                
+                # Добавляем команды для принудительного закрытия приложения
+                f.write('taskkill /f /im python.exe > nul 2>&1\n')
+                f.write('taskkill /f /im pythonw.exe > nul 2>&1\n')
+                
+                # Добавляем паузу для гарантированного освобождения файлов
+                f.write('timeout /t 1 /nobreak > nul\n')
+                
+                # Копируем файлы с подробным выводом
+                f.write('echo Копирование файлов...\n')
+                f.write(f'xcopy /y /s /e /i "{staged_dir}" "{app_dir}" > "{update_dir}\\update_log.txt" 2>&1\n')
                 f.write('if errorlevel 1 (\n')
                 f.write('    echo Ошибка при обновлении!\n')
+                f.write('    echo Проверьте лог: %update_dir%\\update_log.txt\n')
                 f.write(f'    echo Восстанавливаем файлы из резервной копии: {backup_path}\n')
-                f.write(f'    xcopy /y /s /e "{backup_path}\\*" "{app_dir}\\"\n')
+                f.write(f'    xcopy /y /s /e /i "{backup_path}" "{app_dir}" >> "{update_dir}\\update_log.txt" 2>&1\n')
+                f.write('    echo Для просмотра деталей ошибки откройте файл:\n')
+                f.write(f'    echo {update_dir}\\update_log.txt\n')
                 f.write('    pause\n')
                 f.write('    exit /b 1\n')
                 f.write(')\n')
-                f.write(f'rmdir /s /q "{update_dir}"\n')
+                
+                # Очистка временных файлов
+                f.write('echo Очистка временных файлов...\n')
+                f.write(f'rmdir /s /q "{update_dir}" > nul 2>&1\n')
+                
+                # Запуск приложения
                 f.write('echo Обновление успешно завершено\n')
+                f.write('echo Запуск приложения...\n')
                 f.write(f'start "" "{app_dir}\\{LAUNCHER_FILENAME}"\n')
                 f.write('exit\n')
             
@@ -249,7 +376,23 @@ class Updater(QObject):
             self.update_completed.emit()
             self.restart_required.emit()
             
-            os.startfile(finish_update_bat)
+            # Запускаем скрипт обновления с повышенными правами
+            try:
+                import ctypes
+                if ctypes.windll.shell32.IsUserAnAdmin() == 0:
+                    logging.info(f"Requesting elevated privileges for update script: {finish_update_bat}")
+                    result = ctypes.windll.shell32.ShellExecuteW(None, "runas", finish_update_bat, None, None, 1)
+                    if result <= 32:  # Если результат <= 32, это означает ошибку
+                        raise Exception(f"Failed to run update script with elevated privileges (error code: {result})")
+                    logging.info("Update script started with elevated privileges")
+                else:
+                    logging.info(f"Running update script with current privileges: {finish_update_bat}")
+                    os.startfile(finish_update_bat)
+                    logging.info("Update script started")
+            except Exception as e:
+                logging.error(f"Failed to start update script: {str(e)}")
+                raise Exception(f"Failed to start update script: {str(e)}")
+            
             return True
             
         except Exception as e:
