@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QLabel, QHBoxLayout, 
                             QPushButton, QMessageBox, QWidget, QMenu, QSizePolicy,
-                            QApplication, QFileDialog, QProgressDialog, QGridLayout)
+                            QApplication, QFileDialog, QProgressDialog, QGridLayout, QInputDialog)
 from PyQt6.QtCore import pyqtSignal, QSize, Qt, QMimeData, QPoint, QTimer
 from PyQt6.QtGui import QPixmap, QColor, QPainter, QCursor, QAction, QDrag, QIcon
 from styles import PROJECT_CARD_STYLES, COLORS, SIZES
@@ -128,11 +128,14 @@ class ProjectCard(QFrame):
             icons_layout.addWidget(blender_button)
         
         if project_info.get("substance_project", True):
-            substance_icon = QLabel()
-            substance_icon.setFixedSize(20, 20)
-            pixmap = QPixmap("icons/substance.png")
-            substance_icon.setPixmap(pixmap.scaled(20, 20, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-            icons_layout.addWidget(substance_icon)
+            substance_button = QPushButton()
+            substance_button.setFixedSize(20, 20)
+            substance_button.setIcon(QIcon("icons/substance.png"))
+            substance_button.setIconSize(QSize(20, 20))
+            substance_button.setStyleSheet("QPushButton { border: none; background: transparent; }")
+            substance_button.setCursor(Qt.CursorShape.PointingHandCursor)
+            substance_button.clicked.connect(self.open_in_substance)
+            icons_layout.addWidget(substance_button)
         
         bottom_panel.addLayout(icons_layout)
         content_layout.addLayout(bottom_panel)
@@ -152,54 +155,302 @@ class ProjectCard(QFrame):
             self.preview_widget.setGeometry(preview_padding, preview_padding, preview_width, preview_height)
     
     def open_in_blender(self):
+        """Открытие проекта в Blender"""
         try:
+            print("Начинаем открытие проекта в Blender...")
+            
             # Загружаем настройки для получения пути к Blender
-            with open('settings.json', 'r') as f:
+            app_root = os.path.dirname(os.path.abspath(__file__))  # Путь к директории приложения
+            settings_path = os.path.join(app_root, 'settings.json')
+            print(f"Путь к файлу настроек: {settings_path}")
+            
+            if not os.path.exists(settings_path):
+                error_msg = f"Файл настроек не найден по пути:\n{settings_path}"
+                print(error_msg)
+                QMessageBox.warning(self, "Ошибка", error_msg)
+                return
+                
+            with open(settings_path, 'r', encoding='utf-8') as f:
                 settings = json.load(f)
                 blender_path = settings.get('blender_path', '')
+                print(f"Загруженный путь к Blender: {blender_path}")
             
             if not blender_path:
-                QMessageBox.warning(self, "Ошибка", "Путь к Blender не настроен. Пожалуйста, укажите путь в настройках.")
+                error_msg = "Путь к Blender не настроен. Пожалуйста, укажите путь в настройках."
+                print(error_msg)
+                QMessageBox.warning(self, "Ошибка", error_msg)
                 return
                 
             if not os.path.exists(blender_path):
-                QMessageBox.warning(self, "Ошибка", f"Не найден исполняемый файл Blender по пути:\n{blender_path}")
+                error_msg = f"Не найден исполняемый файл Blender по пути:\n{blender_path}"
+                print(error_msg)
+                QMessageBox.warning(self, "Ошибка", error_msg)
                 return
 
-            # Проверяем наличие blend файла в корне проекта
+            # Проверяем наличие blend файлов в проекте
             project_path = self.project_info["path"]
-            project_name = self.project_info["name"]
-            blend_file = os.path.join(project_path, f"{project_name}.blend")
+            print(f"Путь к проекту: {project_path}")
+            
+            blend_files = []
+            
+            # Ищем все blend файлы в проекте
+            for root, dirs, files in os.walk(project_path):
+                for file in files:
+                    if file.endswith('.blend'):
+                        blend_files.append(os.path.join(root, file))
+            
+            print(f"Найденные blend файлы: {blend_files}")
 
-            try:
-                if os.path.exists(blend_file):
-                    # Если файл существует, открываем его
-                    subprocess.Popen([blender_path, blend_file])
+            if blend_files:
+                blend_file = None
+                
+                # Если найден только один файл - открываем его
+                if len(blend_files) == 1:
+                    blend_file = blend_files[0]
+                    print(f"Найден один файл: {blend_file}")
                 else:
-                    # Проверяем наличие аддона
-                    addon_path = "blender_addon.py"
-                    if not os.path.exists(addon_path):
-                        QMessageBox.warning(self, "Ошибка", "Не найден файл аддона blender_addon.py")
-                        return
+                    # Создаем список относительных путей для отображения
+                    rel_paths = [os.path.relpath(f, project_path) for f in blend_files]
+                    print(f"Несколько файлов, показываем диалог выбора: {rel_paths}")
+                    
+                    # Создаем диалог выбора файла
+                    selected, ok = QInputDialog.getItem(
+                        self,
+                        "Выбор файла",
+                        "Выберите файл для открытия:",
+                        rel_paths,
+                        0,  # Индекс элемента по умолчанию
+                        False  # Нельзя редактировать
+                    )
+                    
+                    if ok and selected:
+                        # Преобразуем обратно в полный путь
+                        blend_file = os.path.join(project_path, selected)
+                        print(f"Выбран файл: {blend_file}")
+                
+                if blend_file:
+                    try:
+                        print(f"Запускаем Blender с файлом: {blend_file}")
+                        # Запускаем Blender с файлом проекта
+                        process = subprocess.Popen(
+                            [blender_path, blend_file],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            universal_newlines=True
+                        )
                         
-                    # Если файла нет, запускаем Blender с аддоном
-                    subprocess.Popen([
+                        # Получаем вывод процесса
+                        stdout, stderr = process.communicate(timeout=1)
+                        if stderr:
+                            print(f"Ошибка запуска Blender (stderr): {stderr}")
+                            QMessageBox.critical(self, "Ошибка", f"Ошибка запуска Blender:\n{stderr}")
+                        if stdout:
+                            print(f"Вывод Blender (stdout): {stdout}")
+                        
+                    except subprocess.TimeoutExpired:
+                        print("Blender запущен (процесс продолжает работу)")
+                    except Exception as e:
+                        error_msg = f"Не удалось запустить Blender:\n{str(e)}"
+                        print(f"Ошибка запуска Blender: {error_msg}")
+                        print(f"Подробности:\n{traceback.format_exc()}")
+                        QMessageBox.critical(self, "Ошибка", error_msg)
+                    
+            else:
+                print("Blend файлов не найдено, создаем новый проект")
+                # Если blend файлов нет, создаем новый проект
+                try:
+                    new_file_path = os.path.join(project_path, f"{self.project_info['name']}.blend")
+                    print(f"Путь для нового файла: {new_file_path}")
+                    
+                    # Запускаем Blender с новым файлом
+                    cmd = [
                         blender_path,
-                        "--python", addon_path,
-                        "--",  # Разделитель для передачи аргументов в Python скрипт
-                        "--project-path", project_path,
-                        "--project-name", project_name
-                    ])
+                        "--python-expr",
+                        f"import bpy; bpy.ops.wm.save_as_mainfile(filepath='{new_file_path}')"
+                    ]
+                    print(f"Команда запуска: {' '.join(cmd)}")
+                    
+                    process = subprocess.Popen(
+                        cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        universal_newlines=True
+                    )
                 
-                # Запускаем отложенное обновление превью
-                self.check_preview_update()
-                
-            except subprocess.SubprocessError as e:
-                QMessageBox.critical(self, "Ошибка", f"Не удалось запустить Blender:\n{str(e)}")
+                    # Получаем вывод процесса
+                    stdout, stderr = process.communicate(timeout=1)
+                    if stderr:
+                        print(f"Ошибка создания файла (stderr): {stderr}")
+                        QMessageBox.critical(self, "Ошибка", f"Ошибка создания файла:\n{stderr}")
+                    if stdout:
+                        print(f"Вывод при создании файла (stdout): {stdout}")
+                    
+                except subprocess.TimeoutExpired:
+                    print("Blender запущен (процесс продолжает работу)")
+                except Exception as e:
+                    error_msg = f"Не удалось создать новый файл:\n{str(e)}"
+                    print(f"Ошибка создания файла: {error_msg}")
+                    print(f"Подробности:\n{traceback.format_exc()}")
+                    QMessageBox.critical(self, "Ошибка", error_msg)
             
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка при работе с Blender:\n{str(e)}")
-            print(f"Ошибка при работе с Blender: {e}")
+            error_msg = f"Произошла ошибка при работе с Blender:\n{str(e)}\n\nПодробности:\n{traceback.format_exc()}"
+            print(f"Критическая ошибка: {error_msg}")
+            QMessageBox.critical(self, "Ошибка", error_msg)
+            traceback.print_exc()
+    
+    def open_in_substance(self):
+        """Открытие проекта в Substance Painter"""
+        try:
+            print("Начинаем открытие проекта в Substance Painter...")
+            
+            # Загружаем настройки для получения пути к Substance Painter
+            app_root = os.path.dirname(os.path.abspath(__file__))
+            settings_path = os.path.join(app_root, 'settings.json')
+            print(f"Путь к файлу настроек: {settings_path}")
+            
+            if not os.path.exists(settings_path):
+                error_msg = f"Файл настроек не найден по пути:\n{settings_path}"
+                print(error_msg)
+                QMessageBox.warning(self, "Ошибка", error_msg)
+                return
+                
+            with open(settings_path, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+                substance_path = settings.get('substance_path', '')
+                print(f"Загруженный путь к Substance Painter: {substance_path}")
+            
+            if not substance_path:
+                error_msg = "Путь к Substance Painter не настроен. Пожалуйста, укажите путь в настройках."
+                print(error_msg)
+                QMessageBox.warning(self, "Ошибка", error_msg)
+                return
+                
+            if not os.path.exists(substance_path):
+                error_msg = f"Не найден исполняемый файл Substance Painter по пути:\n{substance_path}"
+                print(error_msg)
+                QMessageBox.warning(self, "Ошибка", error_msg)
+                return
+
+            # Проверяем наличие spp файлов в проекте
+            project_path = self.project_info["path"]
+            print(f"Путь к проекту: {project_path}")
+            
+            spp_files = []
+            
+            # Ищем все spp файлы в проекте
+            for root, dirs, files in os.walk(project_path):
+                for file in files:
+                    if file.endswith('.spp'):
+                        spp_files.append(os.path.join(root, file))
+            
+            print(f"Найденные spp файлы: {spp_files}")
+            
+            if spp_files:
+                spp_file = None
+                
+                # Если найден только один файл - открываем его
+                if len(spp_files) == 1:
+                    spp_file = spp_files[0]
+                    print(f"Найден один файл: {spp_file}")
+                else:
+                    # Создаем список относительных путей для отображения
+                    rel_paths = [os.path.relpath(f, project_path) for f in spp_files]
+                    print(f"Несколько файлов, показываем диалог выбора: {rel_paths}")
+                    
+                    # Создаем диалог выбора файла
+                    selected, ok = QInputDialog.getItem(
+                        self,
+                        "Выбор файла",
+                        "Выберите файл для открытия:",
+                        rel_paths,
+                        0,  # Индекс элемента по умолчанию
+                        False  # Нельзя редактировать
+                    )
+                    
+                    if ok and selected:
+                        # Преобразуем обратно в полный путь
+                        spp_file = os.path.join(project_path, selected)
+                        print(f"Выбран файл: {spp_file}")
+                
+                if spp_file:
+                    try:
+                        print(f"Запускаем Substance Painter с файлом: {spp_file}")
+                        # Запускаем Substance Painter с файлом проекта
+                        process = subprocess.Popen(
+                            [substance_path, "--mesh", spp_file],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            universal_newlines=True
+                        )
+                        
+                        # Получаем вывод процесса
+                        stdout, stderr = process.communicate(timeout=1)
+                        if stderr:
+                            print(f"Ошибка запуска Substance Painter (stderr): {stderr}")
+                            QMessageBox.critical(self, "Ошибка", f"Ошибка запуска Substance Painter:\n{stderr}")
+                        if stdout:
+                            print(f"Вывод Substance Painter (stdout): {stdout}")
+                        
+                    except subprocess.TimeoutExpired:
+                        print("Substance Painter запущен (процесс продолжает работу)")
+                    except Exception as e:
+                        error_msg = f"Не удалось запустить Substance Painter:\n{str(e)}"
+                        print(f"Ошибка запуска Substance Painter: {error_msg}")
+                        print(f"Подробности:\n{traceback.format_exc()}")
+                        QMessageBox.critical(self, "Ошибка", error_msg)
+                    
+            else:
+                print("SPP файлов не найдено, запускаем с плагином для создания нового проекта")
+                try:
+                    # Открываем диалог выбора 3D модели
+                    model_path, _ = QFileDialog.getOpenFileName(
+                        self,
+                        "Выберите 3D модель",
+                        self.project_info["path"],
+                        "3D модели (*.fbx *.obj *.FBX *.OBJ)"
+                    )
+                    
+                    if model_path:
+                        print(f"Выбрана модель: {model_path}")
+                        # Создаем копию текущего окружения
+                        env = os.environ.copy()
+                        # Устанавливаем переменную окружения с путем к модели
+                        env['SP_MODEL_PATH'] = model_path
+                        print(f"Установлена переменная окружения SP_MODEL_PATH: {model_path}")
+                        
+                        # Запускаем Substance Painter с плагином
+                        process = subprocess.Popen(
+                            [substance_path, "--plugin", "project_manager"],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            universal_newlines=True,
+                            env=env  # Используем модифицированное окружение
+                        )
+                        
+                        # Получаем вывод процесса
+                        stdout, stderr = process.communicate(timeout=1)
+                        if stderr:
+                            print(f"Ошибка запуска Substance Painter (stderr): {stderr}")
+                            QMessageBox.critical(self, "Ошибка", f"Ошибка запуска Substance Painter:\n{stderr}")
+                        if stdout:
+                            print(f"Вывод Substance Painter (stdout): {stdout}")
+                    else:
+                        print("Отменен выбор модели")
+                        return
+                    
+                except subprocess.TimeoutExpired:
+                    print("Substance Painter запущен (процесс продолжает работу)")
+                except Exception as e:
+                    error_msg = f"Не удалось запустить Substance Painter:\n{str(e)}"
+                    print(f"Ошибка запуска Substance Painter: {error_msg}")
+                    print(f"Подробности:\n{traceback.format_exc()}")
+                    QMessageBox.critical(self, "Ошибка", error_msg)
+            
+        except Exception as e:
+            error_msg = f"Произошла ошибка при работе с Substance Painter:\n{str(e)}\n\nПодробности:\n{traceback.format_exc()}"
+            print(f"Критическая ошибка: {error_msg}")
+            QMessageBox.critical(self, "Ошибка", error_msg)
             traceback.print_exc()
     
     def format_size(self, size):

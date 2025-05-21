@@ -11,6 +11,7 @@ from datetime import datetime
 from PIL import Image
 import io
 from search_panel import SearchPanel
+import subprocess
 
 # Создаем класс для элементов дерева с переопределенным методом сравнения
 class ProjectTreeItem(QTreeWidgetItem):
@@ -543,6 +544,13 @@ class ProjectWindow(QMainWindow):
                 if os.path.isfile(file_path):
                     open_action = menu.addAction("Открыть")
                     open_action.triggered.connect(lambda: self.open_file(file_path))
+                    
+                    # Добавляем пункт "Установить превью" для изображений
+                    ext = os.path.splitext(file_path)[1].lower()
+                    if ext in ['.jpg', '.jpeg', '.png', '.bmp', '.gif']:
+                        set_preview_action = menu.addAction("Установить превью")
+                        set_preview_action.triggered.connect(lambda: self.set_as_preview(file_path))
+                    
                     menu.addSeparator()
                 elif os.path.isdir(file_path):
                     new_folder_action = menu.addAction("Создать папку")
@@ -828,5 +836,38 @@ class ProjectWindow(QMainWindow):
                 f"Не удалось добавить файлы:\n{str(e)}",
                 QMessageBox.StandardButton.Ok
             )
+
+    def open_file(self, file_path):
+        """Открытие файла в системном приложении по умолчанию"""
+        try:
+            if os.name == 'nt':  # Windows
+                os.startfile(file_path)
+            else:  # Linux/Mac
+                subprocess.run(['xdg-open', file_path])
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть файл:\n{str(e)}")
+
+    def set_as_preview(self, image_path):
+        """Установка изображения как превью проекта"""
+        try:
+            # Создаем папку previews если её нет
+            previews_dir = os.path.join(self.project_path, '.previews')
+            os.makedirs(previews_dir, exist_ok=True)
+            
+            # Копируем изображение
+            preview_path = os.path.join(previews_dir, 'preview.png')
+            
+            # Открываем и сохраняем изображение с помощью PIL
+            with Image.open(image_path) as img:
+                # Изменяем размер с сохранением пропорций
+                max_size = (800, 800)
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                # Сохраняем в PNG
+                img.save(preview_path, 'PNG')
+            
+            QMessageBox.information(self, "Успешно", "Превью проекта успешно установлено")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось установить превью:\n{str(e)}")
 
  

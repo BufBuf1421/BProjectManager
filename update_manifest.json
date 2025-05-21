@@ -1,6 +1,6 @@
 {
-    "version": "0.1.70",
-    "generated_date": "2025-05-21T23:17:30.647878",
+    "version": "0.2.0",
+    "generated_date": "2025-05-22T00:28:03.583518",
     "files": [
         {
             "path": "app_paths.py",
@@ -129,8 +129,8 @@
         },
         {
             "path": "project_card.py",
-            "hash": "7b728a20e9fa988c936d24d0a6b22362bd0ce403b697bf3814f3464079e0db69",
-            "size": 25378
+            "hash": "ee0edad2e0dc8a0be826ff894abb5ccd0fd559226207c80f7b8578a24f40a1f5",
+            "size": 39862
         },
         {
             "path": "project_group.py",
@@ -139,8 +139,8 @@
         },
         {
             "path": "project_window.py",
-            "hash": "4c894c2a9e059048bcddadb7ab2341fd53799c35c1a50e9621d42cb00e1245b2",
-            "size": 38104
+            "hash": "894baf6994a33acad702bb357b684013f5438dbc6e1b7b466ee2171d194033d7",
+            "size": 40328
         },
         {
             "path": "search_panel.py",
@@ -149,8 +149,8 @@
         },
         {
             "path": "settings_dialog.py",
-            "hash": "38db16577392a96b556f299a7a1aa9aed3056f5bc2f8e98a5ad3255e0aa1f175",
-            "size": 10424
+            "hash": "594c8cbd6c0c864859c6e14a04c96328112f16e2a24cafd20410631254b58c1d",
+            "size": 4875
         },
         {
             "path": "styles.py",
@@ -169,8 +169,8 @@
         },
         {
             "path": "version.py",
-            "hash": "8ca422d848a614f495bce3dc78c5d0008b288aba79c30a4fcb9e6933dd5f534a",
-            "size": 217
+            "hash": "0a9096b696f285daec058a3667b6a762f57d11e219c6ba7c761eb431384bfcca",
+            "size": 216
         }
     ]
 }
