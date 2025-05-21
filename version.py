@@ -1,4 +1,4 @@
-VERSION = "0.1.69"
+VERSION = "0.1.70"
 APP_NAME = "BProjectManager"
 PUBLISHER = "BufBuf1421"
 GITHUB_REPO = "BufBuf1421/BProjectManager"

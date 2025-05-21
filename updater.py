@@ -169,8 +169,8 @@ class Updater(QObject):
             if response.status_code != 200:
                 raise Exception(f"Failed to get releases: HTTP {response.status_code}")
             
-                release_info = response.json()
-                latest_version = release_info['tag_name'].lstrip('v')
+            release_info = response.json()
+            latest_version = release_info['tag_name'].lstrip('v')
             
             current_parts = [int(x) for x in self.current_version.split('.')]
             latest_parts = [int(x) for x in latest_version.split('.')]
@@ -439,6 +439,10 @@ class Updater(QObject):
                 f.write('@echo off\n')
                 f.write('chcp 65001>nul\n')
                 f.write('echo Завершение обновления...\n')
+                f.write('timeout /t 2 /nobreak\n')  # Ждем 2 секунды
+                f.write('taskkill /F /IM python.exe /T\n')  # Принудительно завершаем все процессы Python
+                f.write('taskkill /F /IM pythonw.exe /T\n')
+                f.write('timeout /t 3 /nobreak\n')  # Ждем еще 3 секунды после завершения процессов
                 f.write(f'xcopy /y /s /e "{staged_dir}\\*" "{app_dir}\\"\n')
                 f.write('if errorlevel 1 (\n')
                 f.write('    echo Ошибка при обновлении!\n')
@@ -455,6 +459,14 @@ class Updater(QObject):
             logging.info("Update prepared successfully")
             self.update_completed.emit()
             self.restart_required.emit()
+            
+            # Показываем сообщение пользователю
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setText("Обновление готово к установке")
+            msg.setInformativeText("Приложение будет закрыто для завершения обновления. Нажмите OK для продолжения.")
+            msg.setWindowTitle("Обновление")
+            msg.exec()
             
             os.startfile(finish_update_bat)
             return True

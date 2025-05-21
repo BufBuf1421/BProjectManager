@@ -20,7 +20,7 @@ class SettingsDialog(QDialog):
         self.setWindowTitle("Настройки")
         self.setMinimumWidth(600)
         self.setStyleSheet(SETTINGS_DIALOG_STYLE)
-        
+
         # Определяем корневой путь приложения
         self.app_root = os.path.dirname(os.path.abspath(__file__))
 
@@ -147,22 +147,22 @@ class SettingsDialog(QDialog):
     def check_for_updates(self):
         """Проверка обновлений"""
         try:
-            self.check_updates_btn.setEnabled(False)
-            self.check_updates_btn.setText("Проверка обновлений...")
+        self.check_updates_btn.setEnabled(False)
+        self.check_updates_btn.setText("Проверка обновлений...")
             self.status_label.setText("Проверка обновлений...")
             self.status_label.show()
             
             has_update, version, download_url = self.update_manager.check_for_updates()
         
             if has_update and version and download_url:
-                reply = QMessageBox.question(
-                    self,
-                    "Доступно обновление",
-                    f"Доступна новая версия {version}. Хотите обновить приложение?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                )
+            reply = QMessageBox.question(
+                self,
+                "Доступно обновление",
+                f"Доступна новая версия {version}. Хотите обновить приложение?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
             
-                if reply == QMessageBox.StandardButton.Yes:
+            if reply == QMessageBox.StandardButton.Yes:
                     self.progress_bar.show()
                     self.progress_bar.setValue(0)
                     success = self.update_manager.download_and_apply_update(download_url)
@@ -172,12 +172,12 @@ class SettingsDialog(QDialog):
                             "Ошибка обновления",
                             "Не удалось установить обновление. Проверьте лог для деталей."
                         )
-            else:
-                QMessageBox.information(
-                    self,
-                    "Обновление не требуется",
-                    "У вас установлена последняя версия приложения."
-                )
+        else:
+            QMessageBox.information(
+                self,
+                "Обновление не требуется",
+                "У вас установлена последняя версия приложения."
+            )
         except Exception as e:
             QMessageBox.critical(
                 self,
