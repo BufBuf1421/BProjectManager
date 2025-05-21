@@ -1,6 +1,6 @@
 {
-    "version": "0.1.68",
-    "generated_date": "2025-05-21T21:17:49.154767",
+    "version": "0.1.69",
+    "generated_date": "2025-05-21T22:03:15.721697",
     "files": [
         {
             "path": "app_paths.py",
@@ -149,8 +149,8 @@
         },
         {
             "path": "settings_dialog.py",
-            "hash": "9633067b1c0cde337bd8bad9ef7c0f670d6251b80a94ed32f00e03ccd32a4281",
-            "size": 10320
+            "hash": "f7f7bdc5ad419616c5b24dfb030eca85c307676dae3bf8c4ef0ca760987f29a7",
+            "size": 10347
         },
         {
             "path": "styles.py",
@@ -159,8 +159,8 @@
         },
         {
             "path": "updater.py",
-            "hash": "4e5acf102a785fe78364149358dc19b42fde204894efcbeecc2170bd3beb2d3a",
-            "size": 20315
+            "hash": "dacf425396e64154cb5c80da62473defe5d8a5f3406e849225894f58df07ae69",
+            "size": 22391
         },
         {
             "path": "verify_files.py",
@@ -169,8 +169,8 @@
         },
         {
             "path": "version.py",
-            "hash": "1c77738f9b6b908f057c6f15b30b24db56a22b38eb102855c7f9acadd63faa8a",
-            "size": 221
+            "hash": "6d33b5f63a53ffcd622a9325c0a425585bddf28d522b3499ac1608df6e198374",
+            "size": 217
         }
     ]
 }

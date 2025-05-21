@@ -20,7 +20,7 @@ class SettingsDialog(QDialog):
         self.setWindowTitle("Настройки")
         self.setMinimumWidth(600)
         self.setStyleSheet(SETTINGS_DIALOG_STYLE)
-
+        
         # Определяем корневой путь приложения
         self.app_root = os.path.dirname(os.path.abspath(__file__))
 
@@ -34,7 +34,7 @@ class SettingsDialog(QDialog):
         version_layout.addWidget(version_label)
         layout.addLayout(version_layout)
         
-        # Кнопка проверки обновлений
+        # Кнопка проверки обновлений и прогресс-бар
         update_layout = QHBoxLayout()
         self.check_updates_btn = QPushButton("Проверить обновления")
         self.check_updates_btn.clicked.connect(self.check_for_updates)
@@ -153,7 +153,7 @@ class SettingsDialog(QDialog):
             self.status_label.show()
             
             has_update, version, download_url = self.update_manager.check_for_updates()
-            
+        
             if has_update and version and download_url:
                 reply = QMessageBox.question(
                     self,
@@ -161,7 +161,7 @@ class SettingsDialog(QDialog):
                     f"Доступна новая версия {version}. Хотите обновить приложение?",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 )
-                
+            
                 if reply == QMessageBox.StandardButton.Yes:
                     self.progress_bar.show()
                     self.progress_bar.setValue(0)
