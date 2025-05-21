@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 
 def get_app_root():
     """
@@ -156,6 +157,14 @@ def get_backup_dir():
     backup_dir = os.path.join(app_root, 'backups')
     os.makedirs(backup_dir, exist_ok=True)
     return backup_dir
+
+def get_python_dir():
+    """Get the Python directory for the application."""
+    return os.path.join(get_app_root(), 'python')
+
+def get_site_packages_dir():
+    """Get the site-packages directory for the application."""
+    return os.path.join(get_python_dir(), 'Lib', 'site-packages')
 
 # При импорте модуля проверяем и выводим отладочную информацию
 try:
