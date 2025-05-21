@@ -1,6 +1,6 @@
 {
-    "version": "0.1.66",
-    "generated_date": "2025-05-21T20:44:29.901194",
+    "version": "0.1.67",
+    "generated_date": "2025-05-21T20:53:01.195032",
     "files": [
         {
             "path": "app_paths.py",
@@ -119,8 +119,8 @@
         },
         {
             "path": "launcher.bat",
-            "hash": "174d714645d07d0d74117be48dd34b151a686fd399a51347d1ff3cc82d757876",
-            "size": 498
+            "hash": "669b9ea8074916bf81ebb822312b9127ad78b6cafdc4a663f0d1b3d9d784c8d2",
+            "size": 502
         },
         {
             "path": "main.py",
@@ -159,17 +159,17 @@
         },
         {
             "path": "updater.py",
-            "hash": "21587c4dd15a9a7b47215e7fdc42901b5631ff8414de0b5a258cfccbe4083724",
-            "size": 11906
+            "hash": "02ac846016db225135bbda08bfafda2a774cbf736fda04068d5992faf002aadb",
+            "size": 11934
         },
         {
             "path": "verify_files.py",
-            "hash": "fb77c5a2b96004ffcf94d26fb335b249fb6d611e25fcbbb45b12569328ca52ff",
-            "size": 2733
+            "hash": "52a95a533342fcef89eaf23663058b3ecf356589e1fdf4d77f5c5f837cde832d",
+            "size": 3107
         },
         {
             "path": "version.py",
-            "hash": "8d15167af45233f432d550a6fa421b01c42ede04e6b3074f66638af2defede33",
+            "hash": "58ca8aa26ab6759b8a9c2f5e8aa62e2baeeab78b8e6ae51bd919746a01eb385c",
             "size": 221
         }
     ]

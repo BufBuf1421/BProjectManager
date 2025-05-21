@@ -22,7 +22,7 @@ exit /b 1
 
 :error_run
 echo Application error. Error code: %errorlevel%
-pause
+    pause
 exit /b 1
 
 :end

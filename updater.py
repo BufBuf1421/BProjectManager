@@ -74,7 +74,7 @@ class Updater(QObject):
         except Exception as e:
             logging.error(f"Error verifying files: {str(e)}")
             return False
-
+    
     def check_for_updates(self):
         """Проверка наличия обновлений"""
         try:
@@ -85,12 +85,12 @@ class Updater(QObject):
             if response.status_code != 200:
                 raise Exception(f"Failed to get releases: HTTP {response.status_code}")
             
-            release_info = response.json()
-            latest_version = release_info['tag_name'].lstrip('v')
+                release_info = response.json()
+                latest_version = release_info['tag_name'].lstrip('v')
             
             logging.info(f"Latest version: {latest_version}")
             logging.info(f"Current version: {self.current_version}")
-            
+                
             current_parts = [int(x) for x in self.current_version.split('.')]
             latest_parts = [int(x) for x in latest_version.split('.')]
             
@@ -121,8 +121,8 @@ class Updater(QObject):
                         self.update_error.emit(error_msg)
                         return False, latest_version, None
                 
-                download_url = release_info['assets'][0]['browser_download_url']
-                return True, latest_version, download_url
+                    download_url = release_info['assets'][0]['browser_download_url']
+                    return True, latest_version, download_url
             else:
                 logging.info("No updates available")
                 return False, None, None
@@ -163,7 +163,7 @@ class Updater(QObject):
             response = requests.get(download_url, stream=True, headers=headers)
             if response.status_code != 200:
                 raise Exception(f"Failed to download update: HTTP {response.status_code}")
-            
+                
             zip_path = os.path.join(update_dir, "update.zip")
             total_size = int(response.headers.get('content-length', 0))
             block_size = 8192
