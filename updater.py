@@ -17,7 +17,7 @@ class Updater(QObject):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.current_version = VERSION
+        self.current_version = VERSION  # Версия уже содержит префикс 'v'
         self.github_api_url = "https://api.github.com/repos/BufBuf1421/BProjectManager/releases/latest"
         print(f"[DEBUG] Updater initialized with current version: {self.current_version}")
     
@@ -33,15 +33,15 @@ class Updater(QObject):
                 raise Exception(f"Failed to get releases: HTTP {response.status_code}")
             
             release_info = response.json()
-            latest_version = release_info['tag_name'].lstrip('v')
+            latest_version = release_info['tag_name']  # Теперь используем версию с префиксом 'v'
             
             print(f"[DEBUG] Latest version from GitHub: {latest_version}")
             print(f"[DEBUG] Current installed version: {self.current_version}")
             print(f"[DEBUG] Release info: {release_info}")
             
-            # Преобразуем версии в числа для сравнения
-            current_parts = [int(x) for x in self.current_version.split('.')]
-            latest_parts = [int(x) for x in latest_version.split('.')]
+            # Преобразуем версии в числа для сравнения (убираем префикс 'v')
+            current_parts = [int(x) for x in self.current_version.lstrip('v').split('.')]
+            latest_parts = [int(x) for x in latest_version.lstrip('v').split('.')]
             
             # Дополняем версии нулями, если разной длины
             while len(current_parts) < len(latest_parts):
