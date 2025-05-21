@@ -20,7 +20,7 @@ class SettingsDialog(QDialog):
         self.setWindowTitle("Настройки")
         self.setMinimumWidth(600)
         self.setStyleSheet(SETTINGS_DIALOG_STYLE)
-        
+
         # Определяем корневой путь приложения
         self.app_root = os.path.dirname(os.path.abspath(__file__))
 
@@ -220,7 +220,7 @@ class SettingsDialog(QDialog):
             self,
             "Обновление установлено",
             "Обновление успешно установлено. Приложение будет перезапущено."
-        )
+        ) 
         
         # Перезапускаем приложение
         python = sys.executable
