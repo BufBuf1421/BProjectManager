@@ -24,21 +24,6 @@ if exist "python\temp" (
     rmdir /s /q "python\temp"
 )
 
-rem Update pip and install required packages
-echo Installing/Updating required packages...
-"python\python.exe" -m pip install --no-cache-dir charset_normalizer==3.1.0 --target=python\Lib\site-packages
-"python\python.exe" -m pip install --no-cache-dir urllib3==2.0.7 idna==3.4 certifi==2023.7.22 --target=python\Lib\site-packages
-"python\python.exe" -m pip install --no-cache-dir requests==2.28.0 --target=python\Lib\site-packages
-
-rem Verify installation
-echo Verifying dependencies...
-"python\python.exe" -c "import charset_normalizer; import requests; print('Dependencies verified successfully')"
-if errorlevel 1 (
-    echo Error: Dependencies verification failed
-    pause
-    exit /b 1
-)
-
 rem Launch application
 echo Launching application...
 "python\python.exe" main.py
