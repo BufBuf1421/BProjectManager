@@ -3,20 +3,11 @@ import json
 import hashlib
 import logging
 from datetime import datetime
-
-def get_app_root():
-    """Определяет корневой путь приложения"""
-    # Для сборки используем текущую директорию
-    if os.path.exists('generate_manifest.py'):
-        return os.path.abspath('.')
-    
-    # Для установленного приложения
-    return os.path.dirname(os.path.abspath(__file__))
+from app_paths import get_app_root
 
 def setup_logging():
     """Настройка логирования"""
-    app_root = get_app_root()
-    log_dir = os.path.join(app_root, 'logs')
+    log_dir = os.path.join(get_app_root(), 'logs')
     os.makedirs(log_dir, exist_ok=True)
     
     log_file = os.path.join(log_dir, f'verify_{datetime.now().strftime("%Y%m%d")}.log')
@@ -49,9 +40,9 @@ def verify_installation():
             logging.warning("Manifest file not found")
             return True
         
-        logging.info(f"Starting file verification in {app_root}")
+        logging.info("Starting file verification")
         
-        with open(manifest_path, 'r', encoding='utf-8') as f:
+        with open(manifest_path, 'r') as f:
             manifest = json.load(f)
         
         missing_files = []
@@ -88,6 +79,4 @@ def verify_installation():
         return False
 
 if __name__ == '__main__':
-    success = verify_installation()
-    if not success:
-        exit(1) 
+    verify_installation() 

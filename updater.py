@@ -9,6 +9,7 @@ from version import VERSION, APP_NAME, PUBLISHER, GITHUB_REPO, LAUNCHER_FILENAME
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtCore import QObject, pyqtSignal
 from app_paths import get_temp_dir, get_backup_dir, get_app_root
+import subprocess
 
 # Настройка логирования
 def setup_logging():
@@ -169,8 +170,8 @@ class Updater(QObject):
             if response.status_code != 200:
                 raise Exception(f"Failed to get releases: HTTP {response.status_code}")
             
-            release_info = response.json()
-            latest_version = release_info['tag_name'].lstrip('v')
+                release_info = response.json()
+                latest_version = release_info['tag_name'].lstrip('v')
             
             current_parts = [int(x) for x in self.current_version.split('.')]
             latest_parts = [int(x) for x in latest_version.split('.')]
@@ -439,22 +440,53 @@ class Updater(QObject):
                 f.write('@echo off\n')
                 f.write('chcp 65001>nul\n')
                 f.write('echo Завершение обновления...\n')
-                f.write('timeout /t 2 /nobreak\n')  # Ждем 2 секунды
-                f.write('taskkill /F /IM python.exe /T\n')  # Принудительно завершаем все процессы Python
-                f.write('taskkill /F /IM pythonw.exe /T\n')
-                f.write('timeout /t 3 /nobreak\n')  # Ждем еще 3 секунды после завершения процессов
-                f.write(f'xcopy /y /s /e "{staged_dir}\\*" "{app_dir}\\"\n')
+                
+                # Создаем лог-файл
+                f.write(f'set "LOG_FILE=%TEMP%\\update_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log"\n')
+                f.write('echo Начало обновления > "%LOG_FILE%"\n')
+                
+                # Ждем и завершаем процессы
+                f.write('echo Ожидание 2 секунды...\n')
+                f.write('timeout /t 2 /nobreak\n')
+                f.write('echo Завершение процессов Python...\n')
+                f.write('taskkill /F /IM python.exe /T >> "%LOG_FILE%" 2>&1\n')
+                f.write('taskkill /F /IM pythonw.exe /T >> "%LOG_FILE%" 2>&1\n')
+                f.write('echo Ожидание 3 секунды...\n')
+                f.write('timeout /t 3 /nobreak\n')
+                
+                # Проверяем права доступа
+                f.write('echo Проверка прав доступа...\n')
+                f.write(f'icacls "{app_dir}" >> "%LOG_FILE%" 2>&1\n')
+                
+                # Копируем файлы с подробным логированием
+                f.write('echo Копирование файлов...\n')
+                f.write(f'xcopy /y /s /e "{staged_dir}\\*" "{app_dir}\\" >> "%LOG_FILE%" 2>&1\n')
                 f.write('if errorlevel 1 (\n')
-                f.write('    echo Ошибка при обновлении!\n')
+                f.write('    echo Ошибка при копировании файлов!\n')
+                f.write('    echo Проверьте лог: %LOG_FILE%\n')
                 f.write(f'    echo Восстанавливаем файлы из резервной копии: {backup_path}\n')
-                f.write(f'    xcopy /y /s /e "{backup_path}\\*" "{app_dir}\\"\n')
+                f.write(f'    xcopy /y /s /e "{backup_path}\\*" "{app_dir}\\" >> "%LOG_FILE%" 2>&1\n')
+                f.write('    echo Для деталей ошибки откройте: %LOG_FILE%\n')
                 f.write('    pause\n')
                 f.write('    exit /b 1\n')
                 f.write(')\n')
-                f.write(f'rmdir /s /q "{update_dir}"\n')
+                
+                # Очистка
+                f.write('echo Очистка временных файлов...\n')
+                f.write(f'rmdir /s /q "{update_dir}" >> "%LOG_FILE%" 2>&1\n')
+                
+                # Завершение
                 f.write('echo Обновление успешно завершено\n')
                 f.write(f'start "" "{app_dir}\\{LAUNCHER_FILENAME}"\n')
                 f.write('exit\n')
+            
+            # Устанавливаем права на выполнение для BAT-файла
+            os.chmod(finish_update_bat, 0o755)
+            
+            # Запускаем BAT-файл с повышенными правами через powershell
+            powershell_cmd = f'Start-Process -FilePath "{finish_update_bat}" -Verb RunAs -WindowStyle Normal'
+            subprocess.Popen(['powershell', '-Command', powershell_cmd], 
+                           creationflags=subprocess.CREATE_NEW_CONSOLE)
             
             logging.info("Update prepared successfully")
             self.update_completed.emit()
@@ -468,7 +500,6 @@ class Updater(QObject):
             msg.setWindowTitle("Обновление")
             msg.exec()
             
-            os.startfile(finish_update_bat)
             return True
             
         except Exception as e:

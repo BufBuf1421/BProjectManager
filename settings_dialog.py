@@ -147,22 +147,22 @@ class SettingsDialog(QDialog):
     def check_for_updates(self):
         """Проверка обновлений"""
         try:
-        self.check_updates_btn.setEnabled(False)
-        self.check_updates_btn.setText("Проверка обновлений...")
+            self.check_updates_btn.setEnabled(False)
+            self.check_updates_btn.setText("Проверка обновлений...")
             self.status_label.setText("Проверка обновлений...")
             self.status_label.show()
             
             has_update, version, download_url = self.update_manager.check_for_updates()
-        
-            if has_update and version and download_url:
-            reply = QMessageBox.question(
-                self,
-                "Доступно обновление",
-                f"Доступна новая версия {version}. Хотите обновить приложение?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
             
-            if reply == QMessageBox.StandardButton.Yes:
+            if has_update and version and download_url:
+                reply = QMessageBox.question(
+                    self,
+                    "Доступно обновление",
+                    f"Доступна новая версия {version}. Хотите обновить приложение?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                
+                if reply == QMessageBox.StandardButton.Yes:
                     self.progress_bar.show()
                     self.progress_bar.setValue(0)
                     success = self.update_manager.download_and_apply_update(download_url)
@@ -172,12 +172,12 @@ class SettingsDialog(QDialog):
                             "Ошибка обновления",
                             "Не удалось установить обновление. Проверьте лог для деталей."
                         )
-        else:
-            QMessageBox.information(
-                self,
-                "Обновление не требуется",
-                "У вас установлена последняя версия приложения."
-            )
+            else:
+                QMessageBox.information(
+                    self,
+                    "Обновление не требуется",
+                    "У вас установлена последняя версия приложения."
+                )
         except Exception as e:
             QMessageBox.critical(
                 self,
@@ -212,16 +212,16 @@ class SettingsDialog(QDialog):
     
     def on_update_completed(self):
         """Обработчик сигнала о завершении обновления"""
-        self.status_label.setText("Обновление успешно установлено")
+        self.status_label.setText("Обновление готово к установке")
         self.status_label.show()
         self.progress_bar.hide()
         
-        QMessageBox.information(
+        reply = QMessageBox.information(
             self,
-            "Обновление установлено",
-            "Обновление успешно установлено. Приложение будет перезапущено."
+            "Обновление готово",
+            "Обновление подготовлено к установке. Приложение будет закрыто для завершения обновления.",
+            QMessageBox.StandardButton.Ok
         ) 
         
-        # Перезапускаем приложение
-        python = sys.executable
-        os.execl(python, python, *sys.argv) 
+        # Закрываем приложение
+        sys.exit(0)  # Используем sys.exit вместо os.execl 
