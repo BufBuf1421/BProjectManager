@@ -1,0 +1,8 @@
+main-bg: #1D1D1D;
+secondary-bg: #222222;
+border: #2f2f2f;
+acsent: #5C509F;
+
+
+
+ 

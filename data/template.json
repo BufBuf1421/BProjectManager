@@ -1,0 +1,14 @@
+{
+  "name": "MainTemplate",
+  "folders": [
+    "Models",
+    "Textures",
+    "Export/TosP",
+    "Export/FBX",
+    "Export/Anim",
+    "Ren/Fin",
+    "References",
+    "Backup"
+  ],
+  "files": []
+}

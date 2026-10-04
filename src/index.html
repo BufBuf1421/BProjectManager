@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self' file:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:;"
+  />
+  <title>Project Manager</title>
+  <link rel="stylesheet" href="index.css" />
+  <link rel="stylesheet" href="btn.css" />
+</head>
+<body>
+
+<!-- ===== ВЕРХНЯЯ ПАНЕЛЬ С РАБОЧИМИ ОБЛАСТЯМИ ===== -->
+<div id="topBar">
+  <div class="workspace-tabs" id="workspaceTabs">
+    <!-- Вкладки добавляются динамически -->
+  </div>
+
+  <!-- Кнопка уведомлений -->
+  <button class="notifications-btn" id="notificationsBtn" title="Новые задачи">
+    🔔
+    <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+  </button>
+
+  <!-- Кнопка настроек — перемещена из центральной колонки,
+       чтобы быть доступной всегда, а не только при открытом проекте -->
+  <button class="topbar-btn" id="settingsBtn" title="Настройки">⚙️</button>
+
+  <button class="add-workspace-btn" id="addWorkspaceBtn" title="Добавить рабочую область">+</button>
+</div>
+
+<!-- ===== МОДАЛЬНОЕ ОКНО УВЕДОМЛЕНИЙ ===== -->
+<div id="notificationsModal" class="modal" style="display: none;">
+  <div class="modal-content notifications-modal">
+    <h2>🔔 Новые задачи</h2>
+    <div id="notificationsList" class="notifications-list">
+      <p class="placeholder-text">Нет новых задач</p>
+    </div>
+    <div class="modal-actions">
+      <button id="notificationsCloseBtn">Закрыть</button>
+    </div>
+  </div>
+</div>
+  <!-- Левая колонка -->
+<div id="app">
+<canvas id="bg-canvas" style="position: absolute; z-index: -1;"></canvas>
+  <!-- Левая колонка -->
+  <aside id="sidebar" style="overflow: hidden;">
+    <div class="sidebar-header">
+      <div class="search-box">
+        <input type="text" placeholder="Search project or tags..." id="searchInput">
+      </div>
+      <div class="sort-box">
+        <label>Sort by:</label>
+        <select id="sortSelect">
+          <option value="date">Date created</option>
+          <option value="name">Name</option>
+          <option value="modified">Date modified</option>
+        </select>
+        <button id="sortOrderBtn" class="sort-order-btn">↓</button>
+      </div>
+      <div class="status-filter">
+        <label>Status:</label>
+        <div class="status-filter-buttons">
+          <button class="status-filter-btn active status-btn" data-status="all">All</button>
+          <button class="status-filter-btn status-btn" data-status="open">● Open</button>
+          <button class="status-filter-btn status-btn" data-status="active">● Active</button>
+          <button class="status-filter-btn status-btn" data-status="issue">● Issue</button>
+          <button class="status-filter-btn status-btn" data-status="done">● Done</button>
+        </div>
+      </div>
+      <div class="project-tabs">
+        <button class="tab-btn active" data-tab="all">All</button>
+        <button class="tab-btn" data-tab="favorite">Favorite</button>
+        <button class="tab-btn" data-tab="archive">Archive</button>
+      </div>
+    </div>
+    <div id="projectList">
+      <!-- Карточки проектов будут здесь -->
+    </div>
+
+    <!-- ===== КНОПКА СОЗДАНИЯ ПРОЕКТА ===== -->
+    <my-crystal-button id="createProjectBtn">+ Создать проект</my-crystal-button>
+  </aside>
+
+  <!-- ===== РАЗДЕЛИТЕЛЬ ===== -->
+  <div class="resize-handle" id="leftResizeHandle"></div>
+
+  <!-- ===== ЦЕНТРАЛЬНЫЙ БЛОК ===== -->
+  <main id="content">
+    <!-- Приветственный экран (показывается когда нет выбранного проекта) -->
+    <div id="welcomeScreen" class="welcome-screen">
+      <div class="welcome-content">
+        <p style="color: var(--text-dim);">Выберите проект из списка слева или создайте новый</p>
+
+        <!-- Блок непрочитанных уведомлений (задач из Supabase).
+             Заполняется динамически в renderer.js через renderWelcomeNotifications().
+             Если непрочитанных задач нет — блок скрыт. -->
+        <div id="welcomeNotifications" class="welcome-notifications" style="display: none;">
+          <h3 class="welcome-notifications-title">🔔 Новые задачи</h3>
+          <div id="welcomeNotificationsList" class="welcome-notifications-list">
+            <!-- Элементы добавляются динамически -->
+          </div>
+        </div>
+
+        <!--<button id="welcomeCreateBtn" class="btn-create-project">+ Создать проект</button>-->
+        <!-- ===== КНОПКА СОЗДАНИЯ ПРОЕКТА ===== -->
+         <my-crystal-button id="welcomeCreateBtn">+ Создать проект</my-crystal-button>
+      </div>
+    </div>
+
+    <!-- Контент проекта (скрыт пока нет выбранного проекта) -->
+    <div id="projectContent" style="display: none;">
+      <div class="content-header">
+        <div class="project-title">
+          <button class="favorite-btn" id="favoriteBtn" title="Добавить в избранное">☆</button>
+          <h1 id="projectName">Project name</h1>
+          <button class="status-btn" id="statusBtn" data-status="open">● Open</button>
+        </div>
+      </div>
+      <!-- Поле исполнителя + кнопка отправки задачи (показывается только для Lead/Admin) -->
+        <div id="assigneeRow" class="assignee-row" style="display: none;">
+          <label for="assigneeField">Исполнитель:</label>
+          <input type="text" id="assigneeField" list="assigneeFieldList" placeholder="Выберите исполнителя..." autocomplete="off" />
+          <datalist id="assigneeFieldList">
+            <!-- Опции добавляются динамически -->
+          </datalist>
+          <button id="sendTaskBtn" class="btn-send-task" title="Отправить задачу исполнителю">📤 Отправить задачу</button>
+        </div>
+
+      <!-- Кнопки настроек проекта -->
+      <div class="settings-row">
+        <button id="openFolderBtn" class="btn-open-folder">📂 Open folder</button>
+        <button id="copyProjectPathBtn" class="btn-open-folder" title="Скопировать путь к папке проекта в буфер обмена"></button>
+      </div>
+
+      <!-- Кнопки запуска приложений -->
+      <div class="launchers-row">
+        <button class="launcher-btn" id="blenderBtn"><img src="ico/blender_icon_512x512.png" alt="Blender">Blender</button>
+        <button class="launcher-btn" id="substanceBtn"><img src="ico/splogo.png" alt="Substance Painter">Substance Painter</button>
+      </div>
+
+      <!-- Пользовательские ярлыки приложений (кнопка "+") -->
+      <!-- Ярлыки добавляются динамически перед кнопкой "+" (renderer.js) -->
+      <div class="launchers-row custom-apps-row" id="customAppsRow">
+        <button class="launcher-btn custom-app-add-btn" id="addCustomAppBtn" title="Добавить ярлык приложения">＋</button>
+      </div>
+
+      <!-- Блок задач -->
+      <section class="tasks-section">
+        <h2>Tasks</h2>
+        <div id="taskList">
+          <p class="placeholder-text">Нет задач</p>
+        </div>
+        <button id="addTaskBtn">+ Add task...</button>
+      </section>
+
+      <!-- Блок файлов -->
+      <section class="files-section">
+        <div class="files-header">
+          <h2>File overview</h2>
+          <div class="files-controls">
+            <button class="btn-sort" id="sortFilesBtn">Sort</button>
+            <span class="file-type" id="fileCount">0 files</span>
+          </div>
+        </div>
+        <div id="fileList" class="file-list-horizontal">
+          <p class="placeholder-text">Нет файлов</p>
+        </div>
+      </section>
+
+      <!-- Блок заметок -->
+      <section class="notes-section">
+        <div class="notes-header">
+          <h2>Notes</h2>
+          <div class="notes-toolbar">
+            <button class="note-tool-btn" data-command="undo" title="Отменить (Ctrl+Z)">↶</button>
+            <button class="note-tool-btn" data-command="redo" title="Повторить (Ctrl+Y)">↷</button>
+            <span class="toolbar-divider"></span>
+            <button class="note-tool-btn" data-block="h1" title="Заголовок 1">H1</button>
+            <button class="note-tool-btn" data-block="h2" title="Заголовок 2">H2</button>
+            <button class="note-tool-btn" data-block="h3" title="Заголовок 3">H3</button>
+            <button class="note-tool-btn" data-block="p" title="Обычный текст">¶</button>
+            <span class="toolbar-divider"></span>
+            <button class="note-tool-btn" data-command="bold" title="Жирный (Ctrl+B)">𝐁</button>
+            <button class="note-tool-btn" data-command="italic" title="Курсив (Ctrl+I)">𝑰</button>
+            <button class="note-tool-btn" data-command="underline" title="Подчеркнутый (Ctrl+U)">U</button>
+            <button class="note-tool-btn" data-command="strikeThrough" title="Зачеркнутый">S</button>
+            <span class="toolbar-divider"></span>
+            <button class="note-tool-btn" data-action="insertLink" title="Вставить ссылку (Ctrl+K)">🔗</button>
+            <button class="note-tool-btn" data-command="insertUnorderedList" title="Маркированный список">•</button>
+            <button class="note-tool-btn" data-command="insertOrderedList" title="Нумерованный список">1.</button>
+            <!--<button class="note-tool-btn" data-block="blockquote" title="Цитата">❝</button>
+            <button class="note-tool-btn" data-action="insertCode" title="Код">⌘</button>-->
+            <span class="toolbar-divider"></span>
+            <button class="note-tool-btn" data-action="insertHr" title="Разделитель">―</button>
+            <button class="note-tool-btn" data-command="removeFormat" title="Очистить форматирование">↺</button>
+          </div>
+        </div>
+        <div id="notesContainer" contenteditable="true" spellcheck="true"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ===== РАЗДЕЛИТЕЛЬ ===== -->
+  <div class="resize-handle" id="rightResizeHandle"></div>
+
+  <!-- ===== ПРАВАЯ КОЛОНКА ===== -->
+  <aside id="rightSidebar">
+    <!-- Теги -->
+    <div class="tags-section">
+      <h3>Tags</h3>
+      <div id="tagsContainer">
+        <!-- Теги добавляются динамически -->
+      </div>
+      <div class="add-tag-row">
+        <input type="text" id="tagInput" placeholder="Add tag..." />
+        <button id="addTagBtn">+</button>
+      </div>
+    </div>
+
+    <!-- Файловый менеджер -->
+    <div class="file-manager-section">
+      <div class="file-manager-header">
+        <h3>Files</h3>
+        <div class="file-manager-controls">
+          <button class="view-btn" id="backBtn" title="Назад (Alt+←)">◀</button>
+          <button class="view-btn" id="forwardBtn" title="Вперед (Alt+→)">▶</button>
+          <button class="view-btn" id="refreshBtn" title="Обновить">⟳</button>
+        </div>
+      </div>
+      <div class="file-manager-path" id="fileManagerPath"></div>
+      <div id="fileManagerContainer" class="file-manager-tree">
+        <p class="placeholder-text">Выберите проект</p>
+      </div>
+    </div>
+
+    <!-- Пользователь -->
+    <div class="user-info" id="userInfo">
+      <span class="user-icon">👤</span>
+      <span class="user-name" id="userName">Не авторизован</span>
+      <button class="logout-btn" id="logoutBtn" title="Выйти">Выйти из аккаунта</button>
+    </div>
+  </aside>
+</div>
+
+<!-- Модальное окно для создания проекта -->
+<div id="createProjectModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <h2>📁 Создание проекта</h2>
+    <p>Введите название нового проекта:</p>
+    <input type="text" id="projectNameInput" placeholder="Название проекта..." />
+
+    <!-- Выбор исполнителя (показывается только для Lead/Admin) -->
+    <div id="assigneeSelectGroup" class="assignee-select-group" style="display: none;">
+      <label for="assigneeInput">Исполнитель:</label>
+      <input type="text" id="assigneeInput" list="assigneeList" placeholder="Выберите исполнителя..." autocomplete="off" />
+      <datalist id="assigneeList">
+        <!-- Опции добавляются динамически из usersList -->
+      </datalist>
+      <small class="assignee-hint">По умолчанию выбран текущий пользователь. Начните вводить имя для поиска.</small>
+    </div>
+
+    <!-- Выбор шаблона (показывается, если шаблонов больше одного) -->
+    <div id="templateSelectGroup" class="template-select-group" style="display: none;">
+      <label for="templateSelect">Шаблон структуры папок:</label>
+      <select id="templateSelect"></select>
+      <!--<label class="template-default-checkbox">
+        <input type="checkbox" id="setAsWorkspaceDefault">
+        <span>Использовать этот шаблон по умолчанию для этой рабочей области</span>
+      </label>-->
+    </div>
+
+    <div class="modal-actions">
+      <button id="modalCancelBtn">Отмена</button>
+      <button id="modalCreateBtn" class="btn-primary">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно для создания файла -->
+<div id="createFileModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <h2>📄 Создание файла</h2>
+    <p>Введите имя нового файла:</p>
+    <input type="text" id="fileNameInput" placeholder="Имя файла..." />
+    <div class="modal-actions">
+      <button id="fileModalCancelBtn">Отмена</button>
+      <button id="fileModalCreateBtn" class="btn-primary">Создать и открыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно для переименования проекта -->
+<div id="renameProjectModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <h2>✏️ Переименование проекта</h2>
+    <p>Введите новое имя проекта:</p>
+    <input type="text" id="renameProjectInput" placeholder="Новое имя проекта..." />
+    <div class="modal-actions">
+      <button id="renameModalCancelBtn">Отмена</button>
+      <button id="renameModalConfirmBtn" class="btn-primary">Переименовать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно ассоциаций расширений файлов (пользовательские ярлыки) -->
+<div id="extModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <h2 id="extModalTitle">🔗 Расширения файлов</h2>
+    <p id="extModalHint">Через запятую, например: svg, inx</p>
+    <input type="text" id="extModalInput" placeholder="svg, inx, psd..." />
+    <div class="modal-actions">
+      <button id="extModalCancelBtn">Отмена</button>
+      <button id="extModalConfirmBtn" class="btn-primary">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script src="renderer.js" type="module"></script>
+<script src="bg.js" type="module"></script>
+<script type="module">
+  // Проверка настроек и информации о пользователе при загрузке главного экрана.
+  // Ранее тут было два почти идентичных DOMContentLoaded-обработчика —
+  // объединены в один.
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      const result = await window.api.checkSettings();
+      if (!result.exists) {
+        window.location.href = 'settings.html';
+        return;
+      }
+
+      // Восстанавливаем имя пользователя в правой колонке, если есть
+      const authSettings = localStorage.getItem('authSettings');
+      if (authSettings) {
+        try {
+          const userData = JSON.parse(authSettings);
+          const userNameEl = document.getElementById('userName');
+          if (userNameEl && userData.authEmail) {
+            userNameEl.textContent = userData.authUserName || userData.authEmail;
+            userNameEl.classList.remove('guest');
+          }
+        } catch (e) {
+          console.error('Ошибка парсинга authSettings:', e);
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка проверки настроек:', error);
+      window.location.href = 'settings.html';
+    }
+  });
+</script>
+<script src="btn.js"></script>
+
+</body>
+</html>

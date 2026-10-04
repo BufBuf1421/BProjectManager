@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self' file:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:;"
+  />
+  <title>Настройки - Project Manager</title>
+  <link rel="stylesheet" href="settings.css" />
+  <link rel="stylesheet" href="index.css" />
+</head>
+<body>
+  <div id="app">
+<canvas id="bg-canvas" style="position: absolute; z-index: -1;"></canvas>
+  <div id="settingsApp">
+    <h1>⚙️ Настройки</h1>
+    <p class="subtitle">Управление параметрами приложения</p>
+
+    <!-- ===== ВКЛАДКИ ===== -->
+    <div class="settings-tabs">
+      <button type="button" class="settings-tab-btn active" data-tab="general">📁 Основные</button>
+      <button type="button" class="settings-tab-btn" data-tab="templates">🗂️ Шаблоны</button>
+    </div>
+
+    <!-- ===== ВКЛАДКА: ОСНОВНЫЕ ===== -->
+    <div class="settings-tab-content active" id="tab-general">
+      <form id="settingsForm">
+        <!-- Путь к каталогу проектов -->
+        <div class="form-group">
+          <label for="projectsPath">📁 Каталог проектов</label>
+          <div class="input-group">
+            <input type="text" id="projectsPath" placeholder="Выберите папку с проектами" readonly />
+            <button type="button" class="browse-btn" id="browseProjects">Обзор...</button>
+          </div>
+        </div>
+
+        <!-- Путь к Blender -->
+        <div class="form-group">
+          <label for="blenderPath">🌀 Blender</label>
+          <div class="input-group">
+            <input type="text" id="blenderPath" placeholder="Путь к blender.exe" readonly />
+            <button type="button" class="browse-btn" id="browseBlender">Обзор...</button>
+          </div>
+        </div>
+
+        <!-- Путь к Substance Painter -->
+        <div class="form-group">
+          <label for="substancePath">🎨 Substance Painter</label>
+          <div class="input-group">
+            <input type="text" id="substancePath" placeholder="Путь к substance_painter.exe" readonly />
+            <button type="button" class="browse-btn" id="browseSubstance">Обзор...</button>
+          </div>
+        </div>
+
+        <!-- ===== РЕЖИМ BLENDER ДЛЯ МЕШЕЙ ===== -->
+        <hr class="settings-divider" />
+        <h3 class="settings-subtitle">🌀 Blender: создание файлов для мешей</h3>
+
+        <div class="form-group">
+          <p class="settings-hint">
+            Когда в проекте есть меши, при запуске Blender можно создавать
+            один общий .blend файл или по файлу на каждый меш.
+            Выберите, как поступать по умолчанию:
+          </p>
+          <label class="settings-radio">
+
+            <span>Спрашивать каждый раз</span>
+            <input type="radio" name="blenderMeshMode" value="ask" checked>
+          </label>
+          <label class="settings-radio">
+            
+            <span>Один файл для всех мешей</span>
+            <input type="radio" name="blenderMeshMode" value="single">
+          </label>
+          <label class="settings-radio">
+            
+            <span>Отдельный файл для каждого меша</span>
+            <input type="radio" name="blenderMeshMode" value="multi">
+          </label>
+        </div>
+
+
+
+        
+      </form>
+      <!-- ===== АВТОРИЗАЦИЯ SUPABASE ===== -->
+        <div class="autorise">
+        <!--<hr class="settings-divider" />-->
+        <h3 class="settings-subtitle">🔐 Авторизация Supabase</h3>
+
+        <div class="form-group">
+          <label for="supabaseUrl">🌐 Supabase URL</label>
+          <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co" />
+        </div>
+
+        <div class="form-group">
+          <label for="supabaseKey">🔑 Supabase Anon Key</label>
+          <input type="password" id="supabaseKey" placeholder="your-anon-key" />
+        </div>
+
+        <div class="form-group" id="authGroup">
+          <label for="authEmail">👤 Email</label>
+          <input type="email" id="authEmail" placeholder="user@example.com" />
+
+          <label for="authPassword">🔒 Пароль</label>
+          <input type="password" id="authPassword" placeholder="Введите пароль" />
+
+          <p class="auth-hint">💡 Если вы впервые входите, пароль будет установлен автоматически.</p>
+          <button type="button" class="auth-btn" id="authBtn">Войти</button>
+
+          <div id="authStatus" class="auth-status"></div>
+        </div>
+        </div>
+
+      <div id="statusMessage"></div>
+    </div>
+
+    <!-- ===== ВКЛАДКА: ШАБЛОНЫ ===== -->
+    <div class="settings-tab-content" id="tab-templates">
+      <div class="templates-section">
+        <div class="templates-header">
+          <h3>🗂️ Шаблоны проектов</h3>
+          <button type="button" class="btn-add-template" id="btnAddTemplate">+ Создать шаблон</button>
+        </div>
+        <p class="settings-hint">
+          Шаблоны определяют структуру папок, которая создаётся при новом проекте.
+          Можно назначить шаблон по умолчанию для всего приложения.
+        </p>
+
+        <div id="templatesList" class="templates-list">
+          <!-- Карточки шаблонов добавляются динамически -->
+          <p class="placeholder-text">Загрузка шаблонов...</p>
+        </div>
+      </div>
+
+      <!-- ===== РЕДАКТОР ШАБЛОНА (скрыт по умолчанию) ===== -->
+      <div id="templateEditor" class="template-editor" style="display: none;">
+        <div class="template-editor-header">
+          <h3 id="templateEditorTitle">Новый шаблон</h3>
+          <button type="button" class="btn-close-editor" id="btnCloseEditor">✕</button>
+        </div>
+
+        <div class="form-group">
+          <label for="templateName">Название шаблона</label>
+          <input type="text" id="templateName" placeholder="Например: MainTemplate" />
+        </div>
+
+        <div class="form-group">
+          <label>Структура папок</label>
+          <p class="settings-hint">
+            Используйте «/» для создания подпапок.
+            Например: <code>Export/FBX</code> создаст папку <code>Export</code> с подпапкой <code>FBX</code>.
+          </p>
+
+          <div class="folder-tree-toolbar">
+            <button type="button" class="btn-folder-action" id="btnAddFolder">➕ Добавить папку</button>
+          </div>
+
+          <div id="folderTree" class="folder-tree">
+            <!-- Элементы дерева папок добавляются динамически -->
+          </div>
+        </div>
+
+        <div class="template-editor-actions">
+          <button type="button" class="btn-cancel" id="btnCancelTemplate">Отмена</button>
+          <button type="button" class="btn-save" id="btnSaveTemplate">💾 Сохранить шаблон</button>
+        </div>
+      </div>
+      
+    </div>
+    <hr class="settings-divider" />
+    <!-- Кнопки -->
+        <div class="form-actions">
+          <button type="submit" class="btn-save" form="settingsForm">💾 Сохранить</button>
+          <button type="button" class="btn-cancel" id="cancelBtn" form="settingsForm">Отмена</button>
+        </div>
+  </div>
+</div>
+
+  <script src="settings.js" type="module"></script>
+  <script src="bg.js" type="module"></script>
+</body>
+</html>

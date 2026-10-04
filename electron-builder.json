@@ -1,0 +1,33 @@
+{
+  "appId": "com.buf.bprojectmanager",
+  "productName": "BProjectManager",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "src/**/*",
+    "data/**/*",
+    "node_modules/**/*",
+    "!node_modules/.bin/**/*",
+    "!**/*.test.js",
+    "!**/*.spec.js",
+    "!**/*.map",
+    "!**/*.md"
+  ],
+  "win": {
+    "target": "nsis",
+    "icon": "src/ico/app-icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "perMachine": true
+  },
+  "asar": true,
+  "asarUnpack": [
+    "node_modules/fs-extra/**/*",
+    "node_modules/bcryptjs/**/*"
+  ]
+}

@@ -1,0 +1,3744 @@
+/* ============================================
+   ROOT ПЕРЕМЕННЫЕ (Цветовая схема)
+   ============================================ */
+:root {
+  /* Основные цвета */
+  --main-bg: #1a1a1a;
+  --secondary-bg: #222222;
+  --border-color: #2f2f2f;
+  --accent: #0478DB;
+  --accent-hover: #3B92DC;
+  --line-color: #333;
+  --grid-color: rgba(255, 255, 255, 0.02);
+  --grid-color-bold: rgba(255, 255, 255, 0.03);
+  --cross-color-small: rgba(255, 255, 255, 0.15);
+  --cross-color-large: rgba(255, 255, 255, 0.18);
+
+  /* Размеры */
+  --grid-size: 50px;          /* шаг мелкой сетки */
+  --bold-every: 3;             /* каждая N-я линия — жирная */
+  --cross-size-small: 5px;     /* половина длины малого крестика */
+  --cross-size-large: 8px;     /* половина длины большого крестика */
+  --cross-thickness: 1px;
+  
+  /* Анимация */
+  --scroll-speed: 0.06;        /* пикселей за кадр */
+  --twinkle-min: 0.1;          /* минимальная прозрачность крестика */
+  --twinkle-max: 1.0;          /* максимальная прозрачность крестика */
+  --twinkle-speed: 0.0008;      /* скорость мерцания */
+  
+  /* Текст */
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-muted: #808080;
+  --text-dim: #606060;
+  
+  /* Статусы */
+  --status-open: #c1c1c1;
+  --status-active: #4caf50;
+  --status-issue: #ff9800;
+  --status-done: #3B65FF;
+  --status-archived: #4a4a6a;
+  
+  /* Карточка */
+  --card-bg: #2d2d2d;
+  --card-border: #6F6F6F;
+  --card-hover-border: #909090;
+  --card-shadow: rgba(0, 0, 0, 0.3);
+ 
+  /* Модальные окна */
+  --modal-bg: #1D1D1D;
+  --modal-border: #2f2f2f;
+  --modal-overlay: rgba(0, 0, 0, 0.7);
+  
+  /* Скроллбар */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #012A4D;
+  --scrollbar-thumb-hover: #195180;
+  
+  /* Размеры */
+  --sidebar-width: 280px;
+  --right-sidebar-width: 260px;
+  --card-height: 130px;
+  --card-radius: 12px;
+  --border-radius: 12px;
+  --transition-speed: 0.2s;
+}
+
+/* ============================================
+   ОБЩИЕ СТИЛИ
+   ============================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--main-bg);
+  color: var(--text-secondary);
+  height: 100vh;
+  overflow: hidden;
+}
+
+
+#app {
+  display: flex;
+  height: 100vh;
+  /*background: var(--main-bg);*/
+  /*background: var(--main-bg);*/
+ /*background-image: linear-gradient(-90deg, rgb(255 255 255 / 1%) 1px, #00000000 1px),
+  linear-gradient(rgb(255 255 255 / 1%) 1px, transparent 1px),
+  linear-gradient(-90deg, rgba(0, 0, 0, .04) 1px, transparent 1px),
+  linear-gradient(rgba(0, 0, 0, .04) 1px, transparent 1px),
+  linear-gradient(transparent 3px, #232323 3px, #232323 78px, transparent 78px),
+  linear-gradient(-90deg, #484848 1px, transparent 1px),
+  linear-gradient(-90deg, transparent 3px, #232323 3px, #232323 78px, transparent 78px),
+  linear-gradient(#484848 1px, transparent 1px);
+ background-size: 40px 40px,
+        40px 40px,
+        80px 80px,
+        80px 80px,
+        80px 80px,
+        80px 80px,
+        80px 80px,
+        80px 80px;*/
+      }
+
+  /*background:
+        linear-gradient(-90deg, rgba(0,0,0,.05) 1px, transparent 1px),
+        linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px), 
+        linear-gradient(-90deg, rgba(0, 0, 0, .04) 1px, transparent 1px),
+        linear-gradient(rgba(0,0,0,.04) 1px, transparent 1px),
+        linear-gradient(transparent 3px, #f2f2f2 3px, #f2f2f2 78px, transparent 78px),
+        linear-gradient(-90deg, #aaa 1px, transparent 1px),
+        linear-gradient(-90deg, transparent 3px, #f2f2f2 3px, #f2f2f2 78px, transparent 78px),
+        linear-gradient(#aaa 1px, transparent 1px),
+        #f2f2f2;
+    background-size:
+        4px 4px,
+        4px 4px,
+        80px 80px,
+        80px 80px,
+        80px 80px,
+        80px 80px,
+        80px 80px,
+        80px 80px;*/
+
+}
+
+/*#app::before{
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #333;
+  
+  background-size: 6em 6em;
+}*/
+#bg-canvas {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  display: block;
+}
+#sidebar, #rightSidebar{
+
+      backdrop-filter: blur(2px);
+          box-shadow: inset 0 0 20px 3px #7f7f7f0d, 0px 0px 9px 7px #0000002e;
+
+}
+
+.placeholder-text {
+  color: var(--text-dim);
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+/* ============================================
+   СКРОЛЛБАРЫ
+   ============================================ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ============================================
+   ЛЕВАЯ КОЛОНКА (#sidebar)
+   ============================================ */
+#sidebar {
+  margin-bottom: 30px;
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow-y: auto;
+  /*background: var(--secondary-bg);*/
+  background: #222222b0;
+  border-right: 1px solid var(--border-color);
+}
+
+/* --- Заголовок и вкладки --- */
+.sidebar-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.project-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  background: transparent;
+  padding: 4px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+}
+
+.tab-btn:hover {
+  color: var(--text-secondary);
+  background: var(--secondary-bg);
+}
+
+.tab-btn.active {
+  color: var(--text-primary);
+}
+
+/* --- Поиск --- */
+.search-box {
+  margin-bottom: 12px;
+  border-radius: 22px;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 22px;
+  border: 1px solid var(--border-color);
+  background: var(--main-bg);
+  color: var(--text-secondary);
+  font-size: 14px;
+  outline: none;
+}
+
+#searchInput::placeholder {
+  color: var(--text-dim);
+}
+
+#searchInput:focus {
+  border-color: var(--card-border);
+}
+
+/* --- Сортировка --- */
+.sort-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 4px 0;
+}
+
+.sort-box label {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.sort-box select {
+  flex: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--main-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.sort-box select:focus {
+  border-color: var(--card-border);
+}
+
+.sort-box select option {
+  background: var(--main-bg);
+  color: var(--text-secondary);
+}
+
+.sort-order-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--main-bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  transition: all var(--transition-speed);
+  line-height: 1;
+}
+
+.sort-order-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-secondary);
+}
+
+/* --- Список проектов --- */
+#projectList {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 22px;
+      padding: 5px 5px 0px 5px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  align-content: start;
+  padding-right: 4px;
+  max-height: 700px;
+}
+
+/* --- Кнопка создания проекта --- */
+/*#createProjectBtn, .btn-create-project {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  color: var(--text-primary);
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--transition-speed);
+  box-shadow: 0px 8px 20px 0px #00000033, inset 0px 0px 9px 4px #ffffff3b;
+}
+
+#createProjectBtn:hover {
+  background: var(--accent-hover);
+}
+
+/* ============================================
+   КАРТОЧКА ПРОЕКТА
+   ============================================ */
+.project-card {
+  background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    padding: 12px 14px;
+    height: var(--card-height);
+    width: 100%;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+    overflow: hidden;
+    background-size: cover !important;
+    background-position: center !important;
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgb(255 255 255 / 48%);
+    border-radius: 14px;
+    /*box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.05);*/
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.project-card:hover {
+  /*border-color: var(--accent);*/
+  /*box-shadow: inset -20px 20px 20px 0px rgb(106 106 106 / 20%);*/
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+    transform: scale(1.015);
+}
+
+.project-card:active {
+
+  transform: scale(0.98);
+  /*box-shadow: inset -20px 20px 20px 0px rgb(106 106 106 / 20%);*/
+      transform: scale(0.97);
+    box-shadow: 0px 5px 6px rgb(255 255 255 / 9%), inset 0 1px 20px 2px rgba(255, 255, 255, 0.1);
+    transition-duration: 0.08s;
+}
+.project-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* right: 3%; */
+    height: 99%;
+    width: 99%;
+    /* margin: 0 !important; */
+    /* background: #ffffff12; */
+    border: 3px solid #ffffff36;
+    border-radius: 14px;
+    pointer-events: none;
+    /* backdrop-filter: saturate(2); */
+    filter: blur(2px);
+}
+.project-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0px;
+    left: 3px;
+    right: 2px;
+    height: 100%;
+    /* border: 8px solid #ffffff; */
+    filter: blur(3px);
+    border-radius: 0 0px 10px 10px;
+    border-bottom: 5px solid #ffffff1f;
+    pointer-events: none;
+    transition: all 0.4s ease;
+}
+
+
+.project-card.active {
+  /*border-color: var(--accent);
+  border-width: 3px;
+  box-shadow: inset -20px 20px 20px 0px rgb(106 106 106 / 20%)*/
+      transform: scale(0.97);
+    box-shadow: 0px 5px 6px rgb(255 255 255 / 9%), inset 0 1px 20px 2px rgba(255, 255, 255, 0.1);
+    transition-duration: 0.08s;
+}
+
+
+.project-overlay {
+    height: 82%;
+    width: 4px;
+    position: absolute;
+    top: 5px;
+    background: #ffffff4d;
+    right: 4px;
+    border-radius: 0 8px 0 0;
+    opacity: 51%;
+    /* background: #fff; */
+    filter: blur(4px);
+}
+
+/* --- Контент поверх фона --- */
+.project-card .project-status,
+.project-card .project-favorite,
+.project-card-content {
+  z-index: 2;
+  position: relative;
+}
+
+/* --- Имя проекта --- */
+.project-card .project-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 2px;
+  word-break: break-word;
+  line-height: 1.3;
+  max-height: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* --- Иконки приложений --- */
+.project-apps {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.app-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(26, 26, 46, 0.8);
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all var(--transition-speed);
+  color: var(--text-muted);
+  backdrop-filter: blur(4px);
+}
+
+.app-icon:hover {
+  background: rgba(42, 42, 74, 0.9);
+  transform: scale(1.1);
+}
+
+/* --- Статус на карточке --- */
+.project-status {
+  position: absolute !important;
+  top: 10px;
+  right: 10px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  z-index: 3;
+}
+
+.project-status.status-open, {
+  background: var(--status-open);
+  border-color: var(--status-open);
+  box-shadow: 0 0 8px rgba(74, 74, 106, 0.3);
+    animation: pulse-active 2s infinite;
+}
+.project-status.status-open::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  top: 5px;
+  width: 4px;
+  height: 88px;
+  background: var(--status-open);
+  opacity: 0.41;
+  filter: blur(10px);
+  transition: all 0.3s ease;
+    animation: pulse-active 2s infinite;
+}
+
+.project-status.status-active {
+  background: var(--status-active);
+  border-color: var(--status-active);
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
+  animation: pulse-active 2s infinite;
+}
+.project-status.status-active::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  top: 5px;
+  width: 4px;
+  height: 88px;
+  background: var(--status-active);
+  opacity: 0.41;
+  filter: blur(10px);
+  transition: all 0.3s ease;
+    animation: pulse-active 2s infinite;
+}
+
+.project-status.status-issue {
+  background: var(--status-issue);
+  border-color: var(--status-issue);
+  box-shadow: 0 0 10px rgba(255, 152, 0, 0.4);
+  animation: pulse-issue 2s infinite;
+}
+.project-status.status-issue::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  top: 5px;
+  width: 5px;
+  height: 88px;
+  background: var(--status-issue);
+  opacity: 0.41;
+  filter: blur(10px);
+  transition: all 0.3s ease;
+    animation: pulse-active 2s infinite;
+}
+
+.project-status.status-done {
+  background: var(--status-done);
+  border-color: var(--status-done);
+  box-shadow: 0 0 10px rgba(108, 99, 255, 0.4);
+    animation: pulse-active 2s infinite;
+}
+.project-status.status-done::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  top: 5px;
+  width: 4px;
+  height: 88px;
+  background: var(--status-done);
+  opacity: 0.41;
+  filter: blur(10px);
+  transition: all 0.3s ease;
+    animation: pulse-active 2s infinite;
+}
+
+.project-status.status-archived {
+  background: var(--status-archived);
+  border-color: var(--status-archived);
+  box-shadow: 0 0 8px rgba(74, 74, 106, 0.3);
+  opacity: 0.5;
+}
+
+/* --- Избранное на карточке --- */
+.project-favorite {
+  position: absolute !important;
+  top: 0px;
+  right: 30px;
+  font-size: 24px;
+  z-index: 3;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.project-favorite:not(:has(⭐)) {
+  color: var(--text-dim);
+}
+
+/* --- Анимации статусов --- */
+@keyframes pulse-active {
+  0%, 100% { box-shadow: 0 0 8px rgba(76, 175, 80, 0.3); }
+  50% { box-shadow: 0 0 16px rgba(76, 175, 80, 0.6); }
+}
+
+@keyframes pulse-issue {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 152, 0, 0.3); }
+  50% { box-shadow: 0 0 16px rgba(255, 152, 0, 0.6); }
+}
+
+/* ============================================
+   КНОПКА ИЗБРАННОГО (в заголовке)
+   ============================================ */
+.favorite-btn {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0 4px;
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favorite-btn:hover {
+  transform: scale(1.2);
+  color: #ffd700;
+}
+
+.favorite-btn.active {
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.favorite-btn.active:hover {
+  transform: scale(1.2);
+  color: #ffed4a;
+}
+
+/* ============================================
+   ЦЕНТРАЛЬНЫЙ БЛОК (#content)
+   ============================================ */
+#content {
+  flex: 1;
+  padding: 24px 32px;
+  overflow-y: auto;
+  /*background: var(--main-bg);*/
+  background: #222222b0;
+}
+
+/* --- Заголовок --- */
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.project-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#projectName {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* --- Кнопки в шапке проекта (Open folder, Copy path) --- */
+#openFolderBtn {
+  padding: 6px 16px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all var(--transition-speed);
+}
+#copyProjectPathBtn {
+  margin: 9px 10px;
+  width: 14px;
+  height: 14px;
+  background: var(--text-dim);
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 17px;
+  box-shadow: 4px -4px var(--text-muted);
+  transition: all var(--transition-speed);
+  opacity: 0.5;
+}
+#copyProjectPathBtn:hover{
+  opacity: 1;
+}
+
+#openFolderBtn:hover {
+  background: var(--secondary-bg);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.settings-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+/* ============================================
+   ВКЛАДКИ В НАСТРОЙКАХ
+   ============================================ */
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0;
+}
+
+.settings-tab-btn {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--transition-speed);
+  font-family: inherit;
+  margin-bottom: -1px;
+}
+
+.settings-tab-btn:hover {
+  color: var(--text-secondary);
+  background: var(--card-bg);
+  border-radius: 6px 6px 0 0;
+}
+
+.settings-tab-btn.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+.settings-tab-content {
+  display: none;
+}
+
+.settings-tab-content.active {
+    display: flex;
+    justify-content: space-around;
+    gap: 70px;
+}
+
+#supabaseUrl, #supabaseKey, #authEmail, #authPassword {
+  width: 100%;
+}
+
+/* ============================================
+   ВКЛАДКА "ШАБЛОНЫ"
+   ============================================ */
+.templates-section {
+  margin-bottom: 24px;
+}
+
+.templates-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.templates-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.btn-add-template {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all var(--transition-speed);
+}
+
+.btn-add-template:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.templates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.template-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 14px 16px;
+  transition: all var(--transition-speed);
+}
+
+.template-card:hover {
+  border-color: var(--card-hover-border);
+}
+
+.template-card.default {
+  border-color: var(--accent);
+  background: rgba(92, 80, 159, 0.08);
+}
+
+.template-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.template-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.template-default-badge {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--accent);
+  background: rgba(92, 80, 159, 0.2);
+  padding: 2px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.template-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.template-action-btn {
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all var(--transition-speed);
+}
+
+.template-action-btn:hover:not(.disabled) {
+  background: var(--secondary-bg);
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.template-action-btn.disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.template-action-btn.danger {
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
+.template-action-btn.danger:hover {
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+.template-card-folders {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: 'Courier New', monospace;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+/* ===== РЕДАКТОР ШАБЛОНА ===== */
+.template-editor {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-top: 16px;
+}
+
+.template-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.template-editor-header h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.btn-close-editor {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: all var(--transition-speed);
+}
+
+.btn-close-editor:hover {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.15);
+}
+
+.folder-tree-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.btn-folder-action {
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all var(--transition-speed);
+}
+
+.btn-folder-action:hover {
+  background: var(--secondary-bg);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.folder-tree {
+  background: var(--main-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px;
+  min-height: 80px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.folder-tree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background var(--transition-speed);
+}
+
+.folder-tree-item:hover {
+  background: var(--secondary-bg);
+}
+
+.folder-tree-item:hover .folder-tree-actions {
+  opacity: 1;
+}
+
+.folder-tree-indent {
+  font-size: 12px;
+  color: var(--text-dim);
+  width: 16px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.folder-tree-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.folder-tree-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: default;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-tree-rename-input {
+  flex: 1;
+  font-size: 13px;
+  padding: 2px 6px;
+  background: var(--main-bg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+}
+
+.folder-tree-actions {
+  display: flex;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity var(--transition-speed);
+  flex-shrink: 0;
+}
+
+.folder-tree-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: all var(--transition-speed);
+}
+
+.folder-tree-btn:hover {
+  background: var(--card-border);
+  color: var(--text-primary);
+}
+
+.folder-tree-btn.danger:hover {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
+.folder-tree-children {
+  /* контейнер для подпапок — без доп. стилей, отступ через paddingLeft */
+}
+
+.template-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ============================================
+   ВЫБОР ШАБЛОНА В МОДАЛКЕ СОЗДАНИЯ ПРОЕКТА
+   ============================================ */
+.template-select-group {
+  margin: 12px 0px 24px 0px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.template-select-group label {
+  display: flex;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.template-select-group select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--main-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.template-select-group select:focus {
+  border-color: var(--accent);
+}
+
+.template-default-checkbox {
+  display: flex;
+  /*align-items: center;*/
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+#setAsWorkspaceDefault{
+  width: 20px;
+}
+
+.template-default-checkbox input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer !important;
+}
+input[type="checkbox"]{
+  cursor: pointer !important;
+}
+.template-default-checkbox input[type="checkbox"]:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Анимация для индикатора копирования */
+@keyframes dragPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.file-manager-tree .tree-item.drag-over .tree-name {
+  animation: dragPulse 0.8s ease-in-out infinite;
+}
+
+
+
+/* --- Статус (кнопка) --- */
+.status-btn {
+  padding: 4px 14px;
+  border-radius: 20px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  background: var(--card-border);
+  color: var(--text-dim);
+}
+.status-filter-buttons .status-btn{
+  margin-bottom: 5px;
+}
+
+.status-btn:hover {
+  transform: scale(1.05);
+}
+.status-btn.active[data-status="all"] {
+  border: 2px solid var(--status-open);
+}
+
+.status-btn[data-status="open"] {
+  background: var(--card-border);
+  color: var(--status-open);
+}
+.status-btn.active[data-status="open"] {
+  border: 2px solid var(--status-open);
+}
+
+.status-btn[data-status="active"] {
+  background: #1a4a2a;
+  color: var(--status-active);
+}
+.status-btn.active[data-status="active"]{
+  border: 2px solid var(--status-active);
+}
+
+.status-btn[data-status="issue"] {
+  background: #4a3a1a;
+  color: var(--status-issue);
+}
+.status-btn.active[data-status="issue"] {
+  border: 2px solid var(--status-issue);
+}
+
+.status-btn[data-status="done"] {
+  background: #1a2a4a;
+  color: var(--status-done);
+}
+.status-btn.active[data-status="done"] {
+  border: 2px solid var(--status-done);
+}
+
+/* --- Кнопки запуска приложений --- */
+.launchers-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.launcher-btn {
+  padding: 8px 20px;
+  border-radius: var(--border-radius);
+  /*border: 1px solid var(--border-color);
+  background: var(--secondary-bg);*/
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all var(--transition-speed);
+  width: 40%;
+  height: 70px;
+  border: none;
+  font-size: 20px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 20px;
+}
+.launcher-btn img{
+  width: 40px;
+  height: 40px;
+}
+
+.launcher-btn:hover {
+  background: var(--card-border);
+  border-color: var(--accent);
+}
+#blenderBtn{
+  background: linear-gradient(90deg, #403931, #363b43 68%, #2d2d2d);
+}
+#substanceBtn{
+  background: linear-gradient(90deg, #324031, #363b43 68%, #2d2d2d);
+}
+
+/* --- Пользовательские ярлыки приложений (кнопка "+") --- */
+.launchers-row.custom-apps-row {
+  /* Ряд ярлыков идёт сразу под кнопками запуска — подтягиваем ближе */
+  margin-top: -14px;
+}
+
+.launcher-btn.custom-app-btn {
+  width: auto;
+  min-width: 150px;
+  max-width: 220px;
+  background: linear-gradient(90deg, #3d3649, #363b43 68%, #2d2d2d);
+}
+
+.launcher-btn.custom-app-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.launcher-btn.custom-app-add-btn {
+  width: 70px;
+  min-width: 70px;
+  justify-content: center;
+  font-size: 26px;
+  color: #888888;
+  background: transparent;
+  border: 1px dashed #555555;
+  box-sizing: border-box;
+  padding: 8px 0;
+}
+
+.launcher-btn.custom-app-add-btn:hover {
+  color: #ffffff;
+  border-color: var(--accent);
+  background: rgba(92, 80, 159, 0.15);
+}
+
+/* ============================================
+   ЗАДАЧИ (tasks-section)
+   ============================================ */
+.tasks-section {
+  margin-bottom: 24px;
+}
+
+.tasks-section h2 {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.task-item {
+  background: var(--secondary-bg);
+  border-bottom: 1px dashed #333;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background var(--transition-speed);
+  position: relative;
+}
+
+.task-item:hover {
+  background: var(--secondary-bg);
+}
+
+.task-item .task-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all var(--transition-speed);
+  margin-left: auto;
+}
+
+.task-item:hover .task-delete-btn {
+  opacity: 1;
+  color: var(--text-muted);
+}
+
+.task-item .task-delete-btn:hover {
+  color: #ff6b6b;
+  background: #3a1a1a;
+}
+
+/* --- Кнопка "Скопировать в буфер" для mesh-задач --- */
+.task-item .task-copy-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all var(--transition-speed);
+  margin-left: auto;
+}
+
+.task-item-mesh .task-copy-btn {
+  opacity: 0.55;
+}
+
+.task-item:hover .task-copy-btn {
+  opacity: 1;
+  color: var(--text-secondary);
+  border-color: var(--card-border);
+}
+
+.task-item .task-copy-btn:hover {
+  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.task-item .task-copy-btn.copied {
+  color: #4caf50;
+  border-color: #4caf50;
+  opacity: 1;
+}
+
+/* Лэйбл mesh-задачи занимает доступное место, чтобы кнопки выровнялись вправо */
+.task-item .task-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* У mesh-задачи кнопка Copy идёт перед Delete, поэтому Delete не должен
+   оттягиваться вправо через margin-left: auto — auto стоит на Copy. */
+.task-item-mesh .task-delete-btn {
+  margin-left: 0;
+}
+
+#addTaskBtn {
+  background: transparent;
+  border: 1px dashed var(--border-color);
+  color: var(--text-dim);
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+}
+
+#addTaskBtn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
+}
+
+/* --- Строка создания задачи --- */
+.task-create-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--main-bg);
+  border: 1px solid var(--border-color);
+  margin-top: 4px;
+}
+
+.task-create-row input[type="text"] {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  outline: none;
+  padding: 6px 0;
+}
+
+.task-create-row input[type="text"]::placeholder {
+  color: var(--text-dim);
+}
+
+.task-create-row .task-confirm-btn {
+  background: var(--accent);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--transition-speed);
+  white-space: nowrap;
+}
+
+.task-create-row .task-confirm-btn:hover {
+  background: var(--accent-hover);
+}
+
+.task-create-row .task-cancel-btn {
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color var(--transition-speed);
+}
+
+.task-create-row .task-cancel-btn:hover {
+  color: #ff6b6b;
+}
+
+/* ============================================
+   ФАЙЛЫ (files-section)
+   ============================================ */
+.files-section {
+  margin-bottom: 24px;
+  background: var(--secondary-bg);
+  border-radius: var(--border-radius);
+  padding: 15px;
+}
+
+.files-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.files-header h2 {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.files-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-sort {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all var(--transition-speed);
+}
+
+.btn-sort:hover {
+  background: var(--secondary-bg);
+  color: var(--text-secondary);
+}
+
+.file-type {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+/* --- Горизонтальный список файлов --- */
+.file-list-horizontal {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 4px 12px 4px;
+  min-height: 80px;
+  max-height: 140px;
+  align-items: flex-start;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+      background: var(--main-bg);
+    padding: 10px;
+    border-radius: var(--border-radius);
+}
+
+.file-list-horizontal::-webkit-scrollbar {
+  height: 6px;
+}
+
+.file-list-horizontal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.file-list-horizontal::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+.file-list-horizontal::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* --- Карточка файла --- */
+.file-card {
+  flex: 0 0 100px;
+  min-width: 100px;
+  max-width: 120px;
+  height: 100px;
+  background: var(--secondary-bg);
+  /*border: 2px solid var(--card-border);*/
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  padding: 8px;
+  position: relative;
+}
+
+.file-card:hover {
+  border-color: var(--card-hover-border);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--card-shadow);
+}
+
+.file-card.selected {
+  border-color: var(--accent);
+  background: var(--secondary-bg);
+  box-shadow: 0 4px 12px var(--card-shadow);
+  /*border: 3px solid var(--border-color);*/
+  scale: 0.98;
+}
+
+.file-card .file-icon {
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+.file-card .file-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.2;
+  max-height: 28px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.file-card .file-extension {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 9px;
+  color: var(--text-dim);
+  background: var(--main-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.file-card .file-date {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* --- Карточка файла --- */
+.file-card {
+  flex: 0 0 100px;
+  min-width: 100px;
+  max-width: 120px;
+  height: 100px;
+  background: var(--secondary-bg);
+  /*border: 2px solid var(--card-border);*/
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  padding: 8px;
+  position: relative;
+}
+
+.file-card:hover {
+  border-color: var(--card-hover-border);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--card-shadow);
+}
+
+.file-card.selected {
+  border-color: var(--accent);
+  background: var(--secondary-bg);
+  box-shadow: 0 4px 12px var(--card-shadow);
+  /*border: 3px solid var(--border-color);*/
+  scale: 0.98;
+}
+
+.file-card .file-icon {
+  font-size: 32px;
+  margin-bottom: 4px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Иконки приложений (.blend / .spp) как изображения */
+.file-card .file-icon-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Превью вьюпорта для .blend файлов */
+.file-card .file-preview-img {
+  width: 100%;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  background: var(--main-bg);
+}
+
+/* Карточка с превью — увеличиваем высоту иконки-области */
+.file-card.has-preview .file-icon {
+  height: 60px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.file-card .file-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.2;
+  max-height: 28px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.file-card .file-extension {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 9px;
+  color: var(--text-dim);
+  background: var(--main-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.file-card .file-date {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ============================================
+   ЗАМЕТКИ (notes-section)
+   ============================================ */
+.notes-section {
+  margin-top: 8px;
+}
+
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.notes-section h2 {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.notes-toolbar {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  background: var(--card-bg);
+  padding: 4px 6px;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.note-tool-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all var(--transition-speed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.note-tool-btn:hover {
+  background: var(--secondary-bg);
+  color: var(--text-secondary);
+}
+
+.note-tool-btn.active {
+  /*background: var(--card-border);*/
+  color: var(--accent);
+}
+
+/* Текстовые кнопки (H1, H2, H3) — чуть крупнее */
+.note-tool-btn[data-block] {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+#notesContainer {
+  background: var(--secondary-bg);
+  border-radius: var(--border-radius);
+  padding: 14px 16px;
+  min-height: 140px;
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  outline: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+  transition: border-color var(--transition-speed);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+#notesContainer:focus {
+  border-color: var(--accent);
+}
+
+/* Плейсхолдер только когда контейнер действительно пуст */
+#notesContainer:empty::before {
+  content: "Начните вводить заметки...";
+  color: var(--text-dim);
+  font-style: italic;
+  pointer-events: none;
+}
+
+/* Визуальная вспышка при сохранении через Ctrl+S */
+#notesContainer.notes-saved-flash {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+#notesContainer p {
+  margin: 4px 0;
+}
+
+#notesContainer ul,
+#notesContainer ol {
+  margin: 4px 0 4px 20px;
+  padding-left: 4px;
+}
+
+#notesContainer li {
+  margin: 2px 0;
+}
+
+#notesContainer blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  margin: 6px 0;
+  color: var(--text-muted);
+}
+
+#notesContainer code {
+  background: var(--main-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  color: #ff8a8a;
+}
+
+#notesContainer a {
+  color: #6a9fff;
+  text-decoration: underline;
+  text-decoration-color: rgba(106, 159, 255, 0.4);
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  word-break: break-all;
+}
+
+#notesContainer a:hover {
+  color: #8ab4ff;
+  text-decoration-color: #8ab4ff;
+  background: rgba(106, 159, 255, 0.12);
+  border-radius: 2px;
+}
+
+#notesContainer a:visited {
+  color: #b78ce0;
+  text-decoration-color: rgba(183, 140, 224, 0.4);
+}
+
+#notesContainer ::selection {
+  background: var(--accent);
+  color: var(--text-primary);
+}
+
+/* Курсор при наведении на ссылку — pointer, чтобы было ясно, что она кликабельна */
+#notesContainer a:hover {
+  cursor: pointer;
+}
+
+/* ============================================
+   ПРАВАЯ КОЛОНКА (#rightSidebar)
+   ============================================ */
+#rightSidebar {
+  width: var(--right-sidebar-width);
+  min-width: var(--right-sidebar-width);
+  /*background: var(--secondary-bg);*/
+  background: #222222b0;
+  border-left: 1px solid var(--border-color);
+  padding: 20px 16px;
+  overflow-y: auto;
+      display: flex;
+    flex-direction: column;
+}
+
+
+/* --- Теги --- */
+.tags-section {
+  margin-bottom: 24px;
+}
+
+.tags-section h3 {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+#tagsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  min-height: 30px;
+}
+
+.tag-item {
+  background: var(--secondary-bg);
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-speed);
+}
+
+.tag-item .tag-delete {
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1;
+  transition: color var(--transition-speed);
+}
+
+.tag-item .tag-delete:hover {
+  color: var(--text-muted);;
+}
+
+.add-tag-row {
+  display: flex;
+  gap: 6px;
+}
+
+.add-tag-row input {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--main-bg);
+  color: var(--text-secondary);
+  font-size: 13px;
+  outline: none;
+}
+
+.add-tag-row input:focus {
+  border-color: var(--card-border);
+}
+
+.add-tag-row input::placeholder {
+  color: var(--text-dim);
+}
+
+#addTagBtn {
+  display: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  background: var(--main-bg);
+  color: var(--text-dim);
+  font-size: 18px;
+  cursor: pointer;
+  transition: background var(--transition-speed);
+  line-height: 1;
+}
+
+#addTagBtn:hover {
+  color: var(--text-muted);
+}
+
+/* --- Подпроекты --- */
+.sub-projects h3 {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.sub-project-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--main-bg);
+  font-size: 13px;
+}
+
+.sub-project-item .sub-name {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.sub-project-item .sub-date {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.sub-project-item .sub-status {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: #1a4a2a;
+  color: var(--status-active);
+}
+
+.sub-project-item .sub-status.done {
+  background: var(--card-border);
+  color: var(--text-dim);
+}
+
+/* ============================================
+   МОДАЛЬНЫЕ ОКНА
+   ============================================ */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--modal-overlay);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--modal-bg);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 420px;
+  width: 90%;
+  border: 1px solid var(--modal-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.modal-content h2 {
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.modal-content p {
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.modal-content input, #templateName, .input-group input, .form-group input{
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  background: var(--main-bg);
+  color: var(--text-secondary);
+  font-size: 16px;
+  outline: none;
+  margin-bottom: 20px;
+}
+
+.modal-content input:focus, #templateName:focus {
+  border-color: var(--accent);
+}
+
+.modal-content input:disabled, #templateName:disbled{
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modal-actions button {
+  padding: 8px 24px;
+  border-radius: var(--border-radius);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all var(--transition-speed);
+}
+
+/* ============================================
+   МОДАЛКА ВСТАВКИ ССЫЛКИ (для заметок)
+   ============================================ */
+.link-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--modal-overlay, rgba(0, 0, 0, 0.7));
+  z-index: 5000;
+  align-items: center;
+  justify-content: center;
+}
+
+.link-modal-content {
+  background: var(--modal-bg, var(--secondary-bg));
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 20px 24px;
+  width: 380px;
+  max-width: 90vw;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.link-modal-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.link-modal-content label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-top: 4px;
+}
+
+.link-modal-content input[type="text"] {
+  background: var(--main-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--transition-speed);
+}
+
+.link-modal-content input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+.link-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.link-modal-actions button {
+  padding: 7px 18px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all var(--transition-speed);
+}
+
+.link-modal-actions #linkCancel {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.link-modal-actions #linkCancel:hover {
+  background: var(--card-bg);
+  color: var(--text-secondary);
+}
+
+.link-modal-actions #linkOk.btn-primary {
+  background: var(--accent);
+  color: var(--text-primary);
+}
+
+.link-modal-actions #linkOk.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+/* ============================================
+   ДИАЛОГ ВЫБОРА РЕЖИМА BLENDER ДЛЯ МЕШЕЙ
+   ============================================ */
+.mesh-mode-dialog {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--modal-overlay, rgba(0, 0, 0, 0.7));
+  z-index: 5000;
+  align-items: center;
+  justify-content: center;
+}
+
+.mesh-mode-dialog-content {
+  background: var(--modal-bg, var(--secondary-bg));
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 22px 24px;
+  width: 460px;
+  max-width: 90vw;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mesh-mode-dialog-content h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.mesh-mode-dialog-description {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.mesh-mode-dialog-description b {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mesh-mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  background: var(--main-bg);
+}
+
+.mesh-mode-option:hover {
+  border-color: var(--accent);
+  background: var(--card-bg);
+}
+
+.mesh-mode-option input[type="radio"] {
+  margin-top: 3px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mesh-mode-option:has(input[type="radio"]:checked) {
+  border-color: var(--accent);
+  background: rgba(92, 80, 159, 0.12);
+}
+
+.mesh-mode-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mesh-mode-option-text b {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.mesh-mode-option-text small {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.mesh-mode-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px 0;
+  margin-top: 4px;
+}
+
+.mesh-mode-remember input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.mesh-mode-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mesh-mode-dialog-actions button {
+  padding: 7px 18px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all var(--transition-speed);
+}
+
+.mesh-mode-dialog-actions button#meshModeCancel {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.mesh-mode-dialog-actions button#meshModeCancel:hover {
+  background: var(--card-bg);
+  color: var(--text-secondary);
+}
+
+.mesh-mode-dialog-actions button#meshModeOk.btn-primary {
+  background: var(--accent);
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.mesh-mode-dialog-actions button#meshModeOk.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+/* Список выбора 3D-модели (для Substance Painter) */
+.model-selection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.mesh-mode-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mesh-mode-dialog-actions button {
+  padding: 7px 18px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all var(--transition-speed);
+}
+
+.mesh-mode-dialog-actions button#meshModeCancel {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.mesh-mode-dialog-actions button#meshModeCancel:hover {
+  background: var(--card-bg);
+  color: var(--text-secondary);
+}
+
+.mesh-mode-dialog-actions button#meshModeOk.btn-primary {
+  background: var(--accent);
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.mesh-mode-dialog-actions button#meshModeOk.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+/* ============================================
+   РАДИО-КНОПКИ В НАСТРОЙКАХ
+   ============================================ */
+.settings-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+}
+
+.settings-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.settings-radio input[type="radio"] {
+  accent-color: var(--accent);
+  cursor: pointer !important;
+  margin: auto;
+  width: 20px;
+}
+
+#modalCancelBtn,
+#fileModalCancelBtn {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border-color);
+}
+
+#modalCancelBtn:hover,
+#fileModalCancelBtn:hover {
+  border-color: var(--card-hover-border);
+  color: var(--text-secondary);
+}
+
+#modalCreateBtn,
+#fileModalCreateBtn {
+  background: var(--accent);
+  color: var(--text-primary);
+}
+
+#modalCreateBtn:hover,
+#fileModalCreateBtn:hover {
+  background: var(--accent-hover);
+}
+
+/* ============================================
+   КОНТЕКСТНОЕ МЕНЮ
+   ============================================ */
+.context-menu {
+  position: fixed;
+  background: var(--secondary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 6px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: none;
+}
+
+.context-menu-item {
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.context-menu-item:hover {
+  background: var(--card-border);
+}
+
+.context-menu-item.danger {
+  color: #ff6b6b;
+}
+
+.context-menu-item.danger:hover {
+  background: #3a1a1a;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 8px;
+}
+
+/* ============================================
+   ФОРМАТИРОВАНИЕ ТЕКСТА В ЗАМЕТКАХ
+   ============================================ */
+#notesContainer strong {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+#notesContainer em {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+#notesContainer u {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+}
+
+#notesContainer h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 12px 0 6px 0;
+}
+
+#notesContainer h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 10px 0 4px 0;
+}
+
+#notesContainer h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 8px 0 4px 0;
+}
+
+#notesContainer hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 12px 0;
+}
+
+#notesContainer .placeholder-text {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+
+/* ============================================
+   РАЗДЕЛИТЕЛИ ДЛЯ ИЗМЕНЕНИЯ РАЗМЕРА
+   ============================================ */
+.resize-handle {
+  width: 4px;
+  background: transparent;
+  cursor: col-resize;
+  transition: background 0.15s;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--accent);
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 40px;
+  background: var(--border-color);
+  border-radius: 2px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.resize-handle:hover::after,
+.resize-handle.active::after {
+  opacity: 0;
+}
+/* Адаптивная сетка в зависимости от ширины */
+#sidebar.resizable {
+  min-width: 180px;
+  max-width: 70vw; /* Максимум 70% от ширины окна */
+}
+/
+
+
+
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  cursor: default; /* По умолчанию стандартный курсор */
+}
+
+/* Элементы, которые должны иметь pointer */
+/*button,*/
+.btn,
+.tree-item,
+.file-item,
+.file-card,
+.project-card,
+.tab-btn,
+.launcher-btn,
+.status-btn,
+.favorite-btn,
+.tag-item .tag-delete,
+#createProjectBtn,
+#openFolderBtn,
+#copyProjectPathBtn,
+#addTaskBtn,
+#addTagBtn,
+.view-btn,
+.sort-order-btn,
+/*.modal-actions button,*/
+.context-menu-item {
+  cursor: pointer !important;
+}
+
+/* Поля ввода — текстовый курсор */
+input,
+textarea,
+[contenteditable="true"] {
+  cursor: text !important;
+}
+
+/* Запрещаем выделение текста на кликабельных элементах */
+.tree-item,
+.file-item,
+.file-card,
+.file-icon,
+.file-name,
+.file-extension,
+.project-card,
+.tab-btn,
+.launcher-btn,
+.view-btn {
+  user-select: none !important;
+}
+
+
+
+
+
+
+/* ===== ФАЙЛОВЫЙ МЕНЕДЖЕР ===== */
+.file-manager-section {
+  margin-top: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-bottom: 70px;
+}
+
+.file-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.file-manager-header h3 {
+  font-size: 15px;
+  font-weight: 500;
+  color: #808080;
+  margin: 0;
+}
+
+.file-manager-controls {
+  display: flex;
+  gap: 3px;
+}
+
+#backBtn,
+#forwardBtn,
+#refreshBtn{
+  padding: 2px 8px;
+  border: 1px solid #2f2f2f;
+  border-radius: 4px;
+  background: transparent;
+  color: #606060;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  line-height: 1.6;
+}
+
+.view-btn:hover {
+  border-color: #5C509F;
+  color: #e0e0e0;
+}
+
+.view-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.file-manager-path {
+  font-size: 11px;
+  color: #606060;
+  padding: 2px 4px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  background: #1D1D1D;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#fileManagerContainer {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 80px;
+  max-height: 800px;
+  padding: 4px 2px;
+}
+
+#fileManagerContainer .placeholder-text {
+  color: #606060;
+  font-size: 13px;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+/* Дерево */
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #e0e0e0;
+  user-select: none;
+  border: 1px solid transparent;
+  min-height: 28px;
+  transition: background 0.15s ease;
+}
+
+.tree-item:hover {
+  background: #333333;
+  border-color: #444444;
+}
+
+.tree-item.selected {
+  background: #5C509F;
+  border-color: #5C509F;
+  color: #ffffff;
+}
+
+.tree-item .tree-toggle {
+  width: 20px;
+  text-align: center;
+  font-size: 11px;
+  color: #888888;
+  flex-shrink: 0;
+}
+
+.tree-item.selected .tree-toggle {
+  color: #ffffff;
+}
+
+.tree-item .tree-icon {
+  font-size: 16px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.tree-item .tree-name {
+  flex: 1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+}
+
+.tree-children {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-children.collapsed {
+  display: none;
+}
+
+#fileManagerContainer::-webkit-scrollbar {
+  width: 4px;
+}
+
+#fileManagerContainer::-webkit-scrollbar-thumb {
+  background: #3a3a6a;
+  border-radius: 2px;
+}
+
+/* ===== DRAG & DROP ===== */
+.drag-over {
+  border: 2px dashed #5C509F !important;
+  background: rgba(92, 80, 159, 0.15) !important;
+  border-radius: 6px !important;
+}
+
+.tree-item.drag-over {
+  background: rgba(92, 80, 159, 0.25) !important;
+  border-color: #5C509F !important;
+  border-style: dashed !important;
+}
+
+#fileManagerContainer.drag-over {
+  border: 2px dashed #5C509F !important;
+  background: rgba(92, 80, 159, 0.1) !important;
+  border-radius: 8px !important;
+}
+
+/* ============================================
+   ТОСТ-УВЕДОМЛЕНИЕ (для "путь скопирован" и т.д.)
+   ============================================ */
+.app-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--card-bg, #2d2d2d);
+  color: var(--text-primary, #ffffff);
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--accent, #5C509F);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  font-size: 13px;
+  z-index: 10000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  max-width: 80vw;
+  word-break: break-all;
+}
+
+.app-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Анимация для индикатора копирования */
+@keyframes dragPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.file-manager-tree .tree-item.drag-over .tree-name {
+  animation: dragPulse 0.8s ease-in-out infinite;
+}
+
+/* ===== ФИЛЬТР ПО СТАТУСУ ===== */
+.status-filter {
+  margin-bottom: 12px;
+  padding: 4px 0;
+}
+
+.status-filter label {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.status-filter-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.status-filter-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  white-space: nowrap;
+}
+
+.status-filter-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+.status-filter-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+/* ============================================
+   ПОЛЕ "ИСПОЛНИТЕЛЬ" + КНОПКА "ОТПРАВИТЬ ЗАДАЧУ"
+   ============================================ */
+
+/* Строка исполнителя в content-header */
+.assignee-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--secondary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+
+.assignee-row label {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.assignee-row input[type="text"] {
+  width: 180px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  background: var(--main-bg);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+}
+
+.assignee-row input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+.btn-send-task {
+  padding: 6px 14px;
+  border-radius: 5px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all var(--transition-speed);
+}
+
+.btn-send-task:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+/* Поле исполнителя в модалке создания проекта */
+.assignee-select-group {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.assignee-select-group label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.assignee-select-group input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--main-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+}
+
+.assignee-select-group input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+.assignee-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+/* Анимация для индикатора копирования */
+@keyframes dragPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.file-manager-tree .tree-item.drag-over .tree-name {
+  animation: dragPulse 0.8s ease-in-out infinite;
+}
+
+/* ===== ФИЛЬТР ПО СТАТУСУ ===== */
+.status-filter {
+  margin-bottom: 12px;
+  padding: 4px 0;
+}
+
+.status-filter label {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.status-filter-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.status-filter-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  white-space: nowrap;
+}
+
+.status-filter-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+.status-filter-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+
+/* ============================================
+   ПРИВЕТСТВЕННЫЙ ЭКРАН
+   ============================================ */
+#welcomescreen, .welcome-screen {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.welcome-content {
+  text-align: center;
+  max-width: 500px;
+  padding: 40px;
+}
+
+.welcome-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  opacity: 0.6;
+}
+
+.welcome-content h1 {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.welcome-content p {
+  font-size: 18px;
+  color: var(--text-muted);
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+/* ============================================
+   БЛОК УВЕДОМЛЕНИЙ НА WELCOME-ЭКРАНЕ
+   ============================================ */
+.welcome-notifications {
+  text-align: left;
+  margin: 0 auto 24px auto;
+  max-width: 540px;
+  width: 100%;
+  background: var(--secondary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px 18px;
+}
+
+.welcome-notifications-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+  text-align: left;
+}
+
+.welcome-notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.welcome-notification-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-speed);
+}
+
+.welcome-notification-item:hover {
+  border-color: var(--accent);
+  background: var(--card-bg);
+}
+
+.welcome-notification-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.welcome-notification-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.welcome-notification-meta {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.welcome-notification-deadline {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--main-bg);
+  align-self: flex-start;
+}
+
+.welcome-notification-deadline.urgent {
+  color: #ff6b6b;
+  border: 1px solid #ff6b6b;
+}
+
+.welcome-notification-meshes {
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(92, 80, 159, 0.15);
+  padding: 1px 6px;
+  border-radius: 3px;
+  align-self: flex-start;
+}
+
+.welcome-notification-action-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background var(--transition-speed);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.welcome-notification-action-btn:hover {
+  background: var(--accent-hover);
+}
+
+/*.welcome-content .btn-create-project {
+  width: auto;
+  padding: 12px 32px;
+  background: var(--accent);
+  color: var(--text-primary);
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background var(--transition-speed);
+}
+
+.welcome-content .btn-create-project:hover {
+  background: var(--accent-hover);
+}*/
+
+/* ===== ВИЗУАЛЬНЫЙ ФИДБЕК СНАППИНГА ===== */
+.resize-handle {
+  width: 4px;
+  background: transparent;
+  cursor: col-resize;
+  transition: background 0.15s;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--accent);
+}
+
+.resize-handle.snap {
+  background: #6c63ff !important;
+  transition: background 0.1s;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 40px;
+  background: var(--border-color);
+  border-radius: 2px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.resize-handle:hover::after,
+.resize-handle.active::after {
+  opacity: 0;
+}
+
+/* ============================================
+   ВЕРХНЯЯ ПАНЕЛЬ С РАБОЧИМИ ОБЛАСТЯМИ
+   ============================================ */
+#topBar {
+  display: flex;
+  align-items: center;
+  background: var(--secondary-bg);
+  border-bottom: 1px solid var(--border-color);
+  padding: 4px 16px;
+  height: 40px;
+  flex-shrink: 0;
+  gap: 8px;
+  z-index: 100;
+}
+
+.workspace-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+  padding: 2px 0;
+  scrollbar-width: thin;
+}
+
+.workspace-tabs::-webkit-scrollbar {
+  height: 3px;
+}
+
+.workspace-tabs::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+.workspace-tab {
+  padding: 4px 16px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: all var(--transition-speed);
+  font-family: inherit;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+}
+
+.workspace-tab:hover {
+  background: var(--card-bg);
+  color: var(--text-secondary);
+}
+
+.workspace-tab.active {
+  /*background: var(--card-border);*/
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.workspace-tab .tab-close {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.workspace-tab:hover .tab-close {
+  display: inline-block;
+}
+
+.workspace-tab .tab-close:hover {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.2);
+}
+
+.workspace-tab .tab-path {
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0.6;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.add-workspace-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: all var(--transition-speed);
+  flex-shrink: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-workspace-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+
+/* Универсальная компактная кнопка для top-bar (⚙️ Settings и т.д.)
+   По размерам и виду соответствует .notifications-btn и .add-workspace-btn */
+.topbar-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: all var(--transition-speed);
+  flex-shrink: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topbar-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+
+/* ===== Обновляем #app - убираем лишний отступ ===== */
+#app {
+  display: flex;
+  height: calc(100vh - 40px);
+  /*background: var(--main-bg);*/
+  min-width: 0;
+  overflow: hidden;
+}
+/* ===== РЕДАКТИРОВАНИЕ ИМЕНИ ВКЛАДКИ ===== */
+.tab-name-container {
+  display: inline-block;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-rename-input {
+  background: var(--main-bg);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 1px 6px;
+  outline: none;
+  width: auto;
+  min-width: 60px;
+  max-width: 150px;
+  font-family: inherit;
+  height: 22px;
+}
+
+.tab-rename-input:focus {
+  box-shadow: 0 0 0 2px rgba(92, 80, 159, 0.3);
+}
+
+/* Подсветка таба при редактировании */
+.workspace-tab:has(.tab-rename-input) {
+  border-color: var(--accent);
+  background: var(--card-bg);
+}
+
+/* ===== ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ ===== */
+.user-info {
+    position: absolute;
+    bottom: 50px;
+    right: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--main-bg);
+    border: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+
+}
+
+.user-icon {
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+.user-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-name.guest {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.logout-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all var(--transition-speed);
+  line-height: 1;
+}
+
+.logout-btn:hover {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.15);
+}
+
+/* ===== УВЕДОМЛЕНИЯ ===== */
+.notifications-btn {
+  position: relative;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 18px;
+  transition: all var(--transition-speed);
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+
+.notifications-btn.has-notifications {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+  animation: pulse-bell 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-bell {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-15deg); }
+  75% { transform: rotate(15deg); }
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ff6b6b;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--secondary-bg);
+}
+
+.notifications-modal .modal-content {
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.notifications-list {
+  flex: 1;
+  /*overflow-y: auto;*/
+  max-height: 400px;
+  padding: 4px 0;
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--secondary-bg);
+  margin-bottom: 6px;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-speed);
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  border-color: var(--accent);
+  background: var(--card-bg);
+}
+
+.notification-item .notification-info {
+  flex: 1;
+}
+
+.notification-item .notification-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.notification-item .notification-meta {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.notification-item .notification-deadline {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--main-bg);
+}
+
+.notification-item .notification-deadline.urgent {
+  color: #ff6b6b;
+  border: 1px solid #ff6b6b;
+}
+
+.notification-item .notification-action-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background var(--transition-speed);
+  margin-left: 10px;
+}
+
+.notification-item .notification-action-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* --- Split-button: wrapper для кнопки + стрелки --- */
+.notification-action-wrapper {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+
+/* Когда есть стрелка, основная кнопка теряет правый радиус */
+.notification-action-wrapper .notification-action-btn {
+  margin-left: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+/* Стрелка ▼ */
+.notification-action-arrow {
+  padding: 4px 8px;
+  border-radius: 0 6px 6px 0;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--accent);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 10px;
+  transition: background var(--transition-speed);
+}
+
+.notification-action-arrow:hover {
+  background: var(--accent-hover);
+}
+
+/* --- Выпадающий список рабочих областей --- */
+.notification-workspace-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 220px;
+  max-width: 300px;
+  background: var(--modal-bg, var(--secondary-bg));
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  margin-top: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.notification-workspace-dropdown.open {
+  display: block;
+}
+
+.notification-workspace-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background var(--transition-speed);
+}
+
+.notification-workspace-item:last-child {
+  border-bottom: none;
+  border-radius: 0 0 8px 8px;
+}
+
+.notification-workspace-item:first-child {
+  border-radius: 8px 8px 0 0;
+}
+
+.notification-workspace-item:hover {
+  background: var(--card-bg);
+}
+
+.notification-workspace-item.current {
+  background: rgba(92, 80, 159, 0.12);
+}
+
+.notification-workspace-name {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notification-workspace-path {
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-workspace-current-tag {
+  font-size: 9px;
+  color: var(--accent);
+  background: rgba(92, 80, 159, 0.2);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+
+
+/* Расчет количества колонок через медиа-запросы на основе ширины контейнера */
+@container (min-width: 380px) {
+  #projectList {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@container (min-width: 520px) {
+  #projectList {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+#rightSidebar.resizable {
+  min-width: 120px;
+  max-width: 35vw; /* Максимум 35% от ширины окна */
+}
+#app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  /*background: var(--main-bg);*/
+  min-width: 0; /* Важно для правильной работы flex */
+  overflow: hidden;
+}
+
