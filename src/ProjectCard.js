@@ -110,6 +110,35 @@ export function createProjectCard(project, onClick) {
   overlay.className = 'project-overlay';
   card.appendChild(overlay);
 
+
+  const innerframe = document.createElement('span');
+  innerframe.className = 'inner-frame';
+  card.appendChild(innerframe);
+
+  const wingleft = document.createElement('span');
+  wingleft.className = 'wing left';
+  card.appendChild(wingleft);
+
+  const wingright = document.createElement('span');
+  wingright.className = 'wing right';
+  card.appendChild(wingright);
+
+  const tl = document.createElement('span');
+  tl.className = 'corner tl';
+  card.appendChild(tl);
+
+  const tr = document.createElement('span');
+  tr.className = 'corner tr';
+  card.appendChild(tr);
+
+  const bl = document.createElement('span');
+  bl.className = 'corner bl';
+  card.appendChild(bl);
+
+  const br = document.createElement('span');
+  br.className = 'corner br';
+  card.appendChild(br);
+
   // Статус
   const status = document.createElement('div');
   const statusKey = project.status || 'open';

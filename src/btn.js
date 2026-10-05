@@ -17,7 +17,8 @@ class CrystalButton extends HTMLElement {
     width: 253px;
     height: 50px;
     border: none;
-    border-radius: 14px;
+    border-radius: 9px;
+            corner-shape: bevel;
     cursor: pointer;
     outline: none;
     overflow: hidden;
@@ -146,7 +147,7 @@ class CrystalButton extends HTMLElement {
     position: absolute;
     inset: 0;
     z-index: 6;
-    border-radius: 14px;
+    border-radius: 10px;
     pointer-events: none;
     padding: 2px;
     background: linear-gradient(120deg, 
