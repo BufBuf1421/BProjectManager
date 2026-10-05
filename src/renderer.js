@@ -3476,6 +3476,9 @@ function renderTreeItems(items) {
     fileManagerContainer.appendChild(el);
   });
 
+  // Восстанавливаем приглушённый вид «вырезанных» объектов (буфер обмена)
+  if (typeof updateCutMarks === 'function') updateCutMarks();
+
   // Настраиваем drag&drop для новых элементов и контейнера.
   // Откладываем на microtask, чтобы DOM успел отрисоваться.
   setTimeout(() => {
@@ -3540,6 +3543,7 @@ function createTreeItem(item, level = 0) {
     const el = document.createElement('div');
   el.className = 'tree-item';
   el.dataset.path = item.path || '';
+  el.dataset.name = item.name || '';
   el.dataset.isDirectory = item.isDirectory ? 'true' : 'false';
   el.style.paddingLeft = (level * 16 + 4) + 'px';
   el.style.display = 'flex';
@@ -3974,26 +3978,189 @@ function setupDragDropForTreeItems() {
   });
 }
 
+// ===== БУФЕР ОБМЕНА ФАЙЛОВ (Копировать / Вырезать / Вставить) =====
+// Работает как в проводнике Windows:
+//   «Копировать» запоминает объекты (режим copy), «Вырезать» — режим cut
+//   (объекты приглушаются), «Вставить» копирует/перемещает их в целевую папку.
+// Буфер общий для файлового менеджера и File overview.
+
+// SVG-иконки контекстных меню (стиль Windows 11 / Fluent, line-иконки)
+const MENU_ICONS = {
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>',
+  cut: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>',
+  paste: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>',
+  folderPlus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>',
+  pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>',
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
+};
+
+let fileClipboard = [];        // [{ path, name, isDirectory }]
+let fileClipboardMode = null;  // 'copy' | 'cut' | null
+
+/** Все выделенные элементы дерева (в порядке DOM). */
+function getSelectedTreeEntries() {
+  return Array.from(document.querySelectorAll('.tree-item[data-selected="true"]'))
+    .map((el) => ({
+      path: el.dataset.path,
+      name: el.dataset.name || '',
+      isDirectory: el.dataset.isDirectory === 'true',
+      element: el,
+    }))
+    .filter((t) => t.path);
+}
+
+/** Список объектов для операции (Копировать/Вырезать/Удалить/Путь).
+ *  Правый клик по объекту ИЗ выделения — операция применяется ко всем
+ *  выделенным (как в проводнике); по невыделенному — только к нему. */
+function collectOpEntries(target) {
+  if (!target || !target.path) return [];
+  if (target.element && target.element.dataset.selected === 'true') {
+    const entries = getSelectedTreeEntries();
+    if (entries.length > 1) return entries;
+  }
+  return [{
+    path: target.path,
+    name: target.name,
+    isDirectory: target.isDirectory,
+    element: target.element || null,
+  }];
+}
+
+/** Запоминает объекты в буфере обмена (mode: 'copy' | 'cut'). */
+async function copyEntriesToClipboard(entries, mode) {
+  if (!entries || entries.length === 0) return;
+  fileClipboard = entries.map(({ path, name, isDirectory }) => ({ path, name, isDirectory }));
+  fileClipboardMode = mode;
+  updateCutMarks();
+  showToast(
+    mode === 'cut'
+      ? (entries.length === 1 ? `Вырезано: ${entries[0].name}` : `Вырезано объектов: ${entries.length}`)
+      : (entries.length === 1 ? `Скопировано: ${entries[0].name}` : `Скопировано объектов: ${entries.length}`)
+  );
+}
+
+/** Приглушает «вырезанные» объекты (как в проводнике) и снимает старые метки. */
+function updateCutMarks() {
+  document.querySelectorAll('.tree-item[data-cut="true"], .file-card[data-cut="true"]')
+    .forEach((el) => {
+      el.style.opacity = '';
+      el.removeAttribute('data-cut');
+    });
+  if (fileClipboardMode !== 'cut' || fileClipboard.length === 0) return;
+  const allTree = Array.from(document.querySelectorAll('.tree-item'));
+  const allCards = Array.from(document.querySelectorAll('.file-card'));
+  for (const entry of fileClipboard) {
+    const el = allTree.find((n) => n.dataset.path === entry.path) ||
+      allCards.find((n) => n.dataset.filePath === entry.path);
+    if (el) {
+      el.dataset.cut = 'true';
+      el.style.opacity = '0.45';
+    }
+  }
+}
+
+/** Вставка буфера обмена в destDir. Возвращает true, если были изменения. */
+async function pasteClipboardInto(destDir) {
+  if (!destDir) {
+    alert('Папка назначения не выбрана');
+    return false;
+  }
+  if (!fileClipboard.length || !fileClipboardMode) {
+    showToast('Буфер обмена пуст');
+    return false;
+  }
+
+  const isCut = fileClipboardMode === 'cut';
+  let done = 0;
+  let skipped = 0;
+  const errors = [];
+
+  for (const entry of fileClipboard) {
+    try {
+      // Объект могли удалить/переместить после «Копировать» — проверяем
+      const exists = await window.api.fileExists(entry.path);
+      if (!exists || !exists.exists) {
+        skipped++;
+        continue;
+      }
+      // Папку нельзя вложить в саму себя или в свою подпапку
+      if (entry.isDirectory && isSubPath(destDir, entry.path)) {
+        errors.push(`${entry.name}: нельзя вложить папку в саму себя`);
+        continue;
+      }
+      const result = isCut
+        ? await window.api.moveInto(entry.path, destDir)
+        : await window.api.copyInto(entry.path, destDir);
+      if (result.success) {
+        if (result.skipped) skipped++;
+        else done++;
+      } else {
+        errors.push(`${entry.name}: ${result.error}`);
+      }
+    } catch (err) {
+      errors.push(`${entry.name}: ${err.message || err}`);
+    }
+  }
+
+  // Вставка опустошает буфер в режиме «Вырезать» (как в проводнике)
+  if (isCut) {
+    fileClipboard = [];
+    fileClipboardMode = null;
+  }
+  updateCutMarks();
+
+  if (done > 0) {
+    showToast(
+      isCut
+        ? (done === 1 ? 'Перемещено: 1 объект' : `Перемещено объектов: ${done}`)
+        : (done === 1 ? 'Вставлено: 1 объект' : `Вставлено объектов: ${done}`)
+    );
+  } else if (skipped > 0 && errors.length === 0) {
+    showToast('Объекты уже находятся в этой папке');
+  }
+  if (errors.length > 0) {
+    alert('Не удалось вставить:\n' + errors.join('\n'));
+  }
+
+  // Живое обновление File overview и текущей папки менеджера
+  try { await refreshCurrentProjectFiles(); } catch { /* уже обновится по fs-событию */ }
+  return done > 0;
+}
+
+/** Включает/выключает кнопку-иконку в контекстном меню. */
+function setMenuBtnEnabled(id, enabled) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.classList.toggle('disabled', !enabled);
+}
+
 // ===== КОНТЕКСТНОЕ МЕНЮ ФАЙЛОВОГО МЕНЕДЖЕРА =====
+// Строка иконок (как в Windows 11): Вырезать / Копировать / Вставить.
 // Пункты:
 //   - Создать папку (всегда, если есть currentPath)
-//   - Переименовать (только для конкретного файла/папки)
-//   - Скопировать путь (только для конкретного файла/папки)
-//   - Удалить (только для конкретного файла/папки, красный)
+//   - Переименовать, Скопировать путь (для конкретного файла/папки)
+//   - Удалить (для ВСЕХ выделенных объектов, красный)
 const fileContextMenu = document.createElement('div');
 fileContextMenu.className = 'context-menu';
 fileContextMenu.id = 'fileContextMenu';
 fileContextMenu.innerHTML = `
-  <div class="context-menu-item" id="fileMenuCreateFolder">📁 Создать папку</div>
-  <div class="context-menu-divider" id="fileMenuDivider"></div>
-  <div class="context-menu-item" id="fileMenuRename">✏️ Переименовать</div>
-  <div class="context-menu-item" id="fileMenuCopyPath">📋 Скопировать путь</div>
+  <div class="context-menu-icon-row">
+    <div class="context-menu-icon-btn" id="fileMenuCut" title="Вырезать">${MENU_ICONS.cut}</div>
+    <div class="context-menu-icon-btn" id="fileMenuCopy" title="Копировать">${MENU_ICONS.copy}</div>
+    <div class="context-menu-icon-btn" id="fileMenuPaste" title="Вставить">${MENU_ICONS.paste}</div>
+  </div>
   <div class="context-menu-divider"></div>
-  <div class="context-menu-item danger" id="fileMenuDelete">🗑️ Удалить</div>
+  <div class="context-menu-item" id="fileMenuCreateFolder">${MENU_ICONS.folderPlus}<span>Создать папку</span></div>
+  <div class="context-menu-divider" id="fileMenuDivider"></div>
+  <div class="context-menu-item" id="fileMenuRename">${MENU_ICONS.pencil}<span>Переименовать</span></div>
+  <div class="context-menu-item" id="fileMenuCopyPath">${MENU_ICONS.link}<span>Скопировать путь</span></div>
+  <div class="context-menu-divider" id="fileMenuDivider2"></div>
+  <div class="context-menu-item danger" id="fileMenuDelete">${MENU_ICONS.trash}<span>Удалить</span></div>
 `;
 document.body.appendChild(fileContextMenu);
 
-let fileContextMenuTarget = null; // { path, name, isDirectory } или null (клик по пустому месту)
+let fileContextMenuTarget = null; // { path, name, isDirectory, element } или null (клик по пустому месту)
 
 function showFileContextMenu(event, target) {
   event.preventDefault();
@@ -4006,15 +4173,24 @@ function showFileContextMenu(event, target) {
   document.getElementById('fileMenuRename').style.display = hasTarget ? 'flex' : 'none';
   document.getElementById('fileMenuCopyPath').style.display = hasTarget ? 'flex' : 'none';
   document.getElementById('fileMenuDelete').style.display = hasTarget ? 'flex' : 'none';
-  // Первый разделитель скрываем, если нет Create Folder (но он всегда есть)
+  // Разделитель между «Создать папку» и «Переименовать» — только с файлом
   document.getElementById('fileMenuDivider').style.display =
     hasTarget ? 'block' : 'none';
+  // Разделитель перед «Удалить» — тоже только с файлом (иначе висячая линия)
+  document.getElementById('fileMenuDivider2').style.display =
+    hasTarget ? 'block' : 'none';
+
+  // Кнопки-иконки: копировать/вырезать можно только конкретный объект,
+  // вставить — только при непустом буфере и открытой папке
+  setMenuBtnEnabled('fileMenuCopy', hasTarget);
+  setMenuBtnEnabled('fileMenuCut', hasTarget);
+  setMenuBtnEnabled('fileMenuPaste', !!currentPath && fileClipboard.length > 0);
 
   // Позиционируем меню
   let x = event.clientX;
   let y = event.clientY;
-  const menuWidth = 200;
-  const menuHeight = 180;
+  const menuWidth = 230;
+  const menuHeight = 300;
   if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
   if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
 
@@ -4041,23 +4217,53 @@ document.addEventListener('contextmenu', (e) => {
   }
 });
 
-// Правый клик на элементе дерева — показываем меню для этого файла/папки
+// Правый клик на элементе дерева — показываем меню для этого файла/папки.
+// Если объект не был выделен — выделяем только его (как в проводнике);
+// если был — сохраняем всё выделение (операции применятся ко всем выбранным).
 fileManagerContainer.addEventListener('contextmenu', (e) => {
   const treeItem = e.target.closest('.tree-item');
   if (treeItem) {
+    if (treeItem.dataset.selected !== 'true') {
+      clearTreeSelection();
+      setTreeItemSelected(treeItem, true);
+      lastSelectedTreeItem = treeItem;
+    }
     const target = {
       path: treeItem.dataset.path,
-      name: treeItem.querySelector('span:last-of-type')?.textContent || '',
+      name: treeItem.dataset.name || '',
       isDirectory: treeItem.dataset.isDirectory === 'true',
       element: treeItem,
     };
     showFileContextMenu(e, target);
   } else {
-    // Клик по пустой области — только «Создать папку»
+    // Клик по пустой области — только «Создать папку» и «Вставить»
     if (currentPath) {
       showFileContextMenu(e, null);
     }
   }
+});
+
+// --- Иконки: Вырезать / Копировать / Вставить ---
+document.getElementById('fileMenuCopy').addEventListener('click', async () => {
+  const target = fileContextMenuTarget;
+  hideFileContextMenu();
+  if (!target || !target.path) return;
+  await copyEntriesToClipboard(collectOpEntries(target), 'copy');
+});
+
+document.getElementById('fileMenuCut').addEventListener('click', async () => {
+  const target = fileContextMenuTarget;
+  hideFileContextMenu();
+  if (!target || !target.path) return;
+  await copyEntriesToClipboard(collectOpEntries(target), 'cut');
+});
+
+document.getElementById('fileMenuPaste').addEventListener('click', async () => {
+  const target = fileContextMenuTarget;
+  hideFileContextMenu();
+  // Вставляем в папку, на которую кликнули правой кнопкой, иначе в текущую
+  const destDir = (target && target.isDirectory && target.path) ? target.path : currentPath;
+  await pasteClipboardInto(destDir);
 });
 
 // ===== ОБРАБОТЧИКИ ПУНКТОВ МЕНЮ =====
@@ -4142,15 +4348,18 @@ document.getElementById('fileMenuRename').addEventListener('click', async () => 
 });
 
 // --- Скопировать путь ---
+// При множественном выделении копируются пути ВСЕХ выделенных объектов
+// (по одному в строке).
 document.getElementById('fileMenuCopyPath').addEventListener('click', async () => {
   const target = fileContextMenuTarget;
   hideFileContextMenu();
   if (!target || !target.path) return;
 
-  const pathToCopy = target.path;
+  const targets = collectOpEntries(target);
+  const pathToCopy = targets.map((t) => t.path).join('\n');
   try {
     await navigator.clipboard.writeText(pathToCopy);
-    showToast(`Скопировано: ${pathToCopy}`);
+    showToast(targets.length > 1 ? `Скопировано путей: ${targets.length}` : `Скопировано: ${pathToCopy}`);
   } catch (err) {
     // Fallback на устаревший execCommand
     try {
@@ -4169,31 +4378,99 @@ document.getElementById('fileMenuCopyPath').addEventListener('click', async () =
   }
 });
 
-// --- Удалить ---
+// --- Удаление выделенных объектов дерева (общая для меню и клавиши Delete) ---
+async function deleteTreeEntries(entries) {
+  if (!entries || entries.length === 0) return;
+
+  // Подтверждение: для нескольких объектов показываем список имён
+  let confirmText;
+  if (entries.length === 1) {
+    const t = entries[0];
+    const typeLabel = t.isDirectory ? 'папку' : 'файл';
+    confirmText =
+      `Удалить ${typeLabel} "${t.name}"?\n\n` +
+      (t.isDirectory
+        ? 'Все файлы и подпапки будут удалены безвозвратно!'
+        : 'Файл будет удалён безвозвратно!');
+  } else {
+    const MAX_NAMES = 10;
+    const names = entries
+      .slice(0, MAX_NAMES)
+      .map((t) => `  • ${t.name}`)
+      .join('\n');
+    const more = entries.length > MAX_NAMES ? `\n  …и ещё ${entries.length - MAX_NAMES}` : '';
+    confirmText =
+      `Удалить выбранные объекты (${entries.length})?\n\n${names}${more}\n\n` +
+      'Все выбранные файлы и папки будут удалены безвозвратно!';
+  }
+  if (!confirm(confirmText)) return;
+
+  let deleted = 0;
+  const errors = [];
+  // Если среди выделенных есть папка и файлы внутри неё — файлы удалятся
+  // вместе с папкой; не считаем их повторное удаление ошибкой.
+  const deletedDirs = [];
+  const isInsideDeleted = (p) => {
+    const norm = String(p || '').replace(/[\\/]+$/, '').toLowerCase();
+    return deletedDirs.some((d) => norm === d || norm.startsWith(d + '\\') || norm.startsWith(d + '/'));
+  };
+
+  for (const t of entries) {
+    try {
+      if (isInsideDeleted(t.path)) {
+        deleted++; // уже удалён вместе с родительской папкой
+        continue;
+      }
+      const result = await window.api.deletePath(t.path);
+      if (result.success) {
+        deleted++;
+        if (t.isDirectory) {
+          deletedDirs.push(String(t.path).replace(/[\\/]+$/, '').toLowerCase());
+        }
+      } else {
+        errors.push(`${t.name}: ${result.error}`);
+      }
+    } catch (error) {
+      errors.push(`${t.name}: ${error.message}`);
+    }
+  }
+
+  // Очищаем выделение — удалённые объекты исчезнут после перерисовки
+  clearTreeSelection();
+  lastSelectedTreeItem = null;
+
+  // Обновляем File overview и файловый менеджер: если удалена текущая
+  // папка — refreshCurrentProjectFiles сам поднимется к существующей родительской
+  try { await refreshCurrentProjectFiles(); } catch { /* fs-событие обновит */ }
+
+  if (errors.length > 0) {
+    alert(`Удалено: ${deleted}, ошибок: ${errors.length}\n${errors.join('\n')}`);
+  } else if (entries.length > 1) {
+    showToast(`Удалено объектов: ${deleted}`);
+  }
+}
+
+// --- Удалить (меню) — удаляет ВСЕ выделенные объекты ---
 document.getElementById('fileMenuDelete').addEventListener('click', async () => {
   const target = fileContextMenuTarget;
   hideFileContextMenu();
   if (!target || !target.path) return;
 
-  const typeLabel = target.isDirectory ? 'папку' : 'файл';
-  const confirmDelete = confirm(
-    `Удалить ${typeLabel} "${target.name}"?\n\n` +
-    (target.isDirectory
-      ? 'Все файлы и подпапки будут удалены безвозвратно!'
-      : 'Файл будет удалён безвозвратно!')
-  );
-  if (!confirmDelete) return;
+  await deleteTreeEntries(collectOpEntries(target));
+});
 
-  try {
-    const result = await window.api.deletePath(target.path);
-    if (result.success) {
-      await loadDirectory(currentPath, false);
-    } else {
-      alert(`Ошибка удаления: ${result.error}`);
-    }
-  } catch (error) {
-    alert(`Ошибка: ${error.message}`);
-  }
+// --- Клавиша Delete — удалить выделенные в файловом менеджере ---
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Delete') return;
+  if (e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return;
+  // Не мешаем вводу текста (переименование, поиск, заметки и т.д.)
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return;
+  if (!currentPath) return;
+  const entries = getSelectedTreeEntries();
+  if (entries.length === 0) return;
+  e.preventDefault();
+  deleteTreeEntries(entries);
 });
 
 // ===== ТОСТ (всплывающее уведомление) =====
@@ -4507,6 +4784,8 @@ function showToast(message, duration = 2000) {
         const card = createFileCard(item.file, item.previewUrl);
         fileList.appendChild(card);
       });
+      // Восстанавливаем приглушённый вид «вырезанных» файлов (буфер обмена)
+      if (typeof updateCutMarks === 'function') updateCutMarks();
     });
   }
 
@@ -4611,6 +4890,17 @@ function showToast(message, duration = 2000) {
       selectedFile = file;
     });
 
+    // Правый клик — контекстное меню File overview
+    card.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Выделяем карточку (как по левому клику)
+      document.querySelectorAll('.file-card').forEach((c) => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedFile = file;
+      showFileOverviewMenu(e, { path: file.path, name: file.name });
+    });
+
     card.addEventListener('dblclick', async () => {
       const project = projects.find((p) => p.id === selectedProjectId);
       if (!project) return;
@@ -4656,6 +4946,190 @@ function showToast(message, duration = 2000) {
 
     return card;
   }
+
+  // ===== КОНТЕКСТНОЕ МЕНЮ FILE OVERVIEW =====
+  // Строка иконок (как в Windows 11): Вырезать / Копировать / Вставить +
+  // пункты «Переименовать», «Скопировать путь», «Удалить».
+  // «Вставить» помещает файлы из буфера обмена в корень проекта.
+  const fileOverviewMenu = document.createElement('div');
+  fileOverviewMenu.className = 'context-menu';
+  fileOverviewMenu.id = 'fileOverviewContextMenu';
+  fileOverviewMenu.innerHTML = `
+    <div class="context-menu-icon-row">
+      <div class="context-menu-icon-btn" id="foMenuCut" title="Вырезать">${MENU_ICONS.cut}</div>
+      <div class="context-menu-icon-btn" id="foMenuCopy" title="Копировать">${MENU_ICONS.copy}</div>
+      <div class="context-menu-icon-btn" id="foMenuPaste" title="Вставить">${MENU_ICONS.paste}</div>
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" id="foMenuRename">${MENU_ICONS.pencil}<span>Переименовать</span></div>
+    <div class="context-menu-item" id="foMenuCopyPath">${MENU_ICONS.link}<span>Скопировать путь</span></div>
+    <div class="context-menu-divider" id="foMenuDivider2"></div>
+    <div class="context-menu-item danger" id="foMenuDelete">${MENU_ICONS.trash}<span>Удалить</span></div>
+  `;
+  document.body.appendChild(fileOverviewMenu);
+
+  let foMenuTarget = null; // { path, name } или null (клик по пустому месту)
+
+  function showFileOverviewMenu(event, target) {
+    event.preventDefault();
+    event.stopPropagation();
+    foMenuTarget = target;
+
+    const hasTarget = !!(target && target.path);
+    document.getElementById('foMenuRename').style.display = hasTarget ? 'flex' : 'none';
+    document.getElementById('foMenuCopyPath').style.display = hasTarget ? 'flex' : 'none';
+    document.getElementById('foMenuDelete').style.display = hasTarget ? 'flex' : 'none';
+    document.getElementById('foMenuDivider2').style.display = hasTarget ? 'block' : 'none';
+    setMenuBtnEnabled('foMenuCopy', hasTarget);
+    setMenuBtnEnabled('foMenuCut', hasTarget);
+    setMenuBtnEnabled('foMenuPaste',
+      !!(currentProject && currentProject.path) && fileClipboard.length > 0);
+
+    let x = event.clientX;
+    let y = event.clientY;
+    const menuWidth = 230;
+    const menuHeight = 280;
+    if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
+    if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
+
+    fileOverviewMenu.style.left = x + 'px';
+    fileOverviewMenu.style.top = y + 'px';
+    fileOverviewMenu.style.display = 'block';
+  }
+
+  function hideFileOverviewMenu() {
+    fileOverviewMenu.style.display = 'none';
+    foMenuTarget = null;
+  }
+
+  // Закрытие меню при клике вне него / правом клике в другом месте
+  document.addEventListener('click', (e) => {
+    if (!fileOverviewMenu.contains(e.target)) hideFileOverviewMenu();
+  });
+  document.addEventListener('contextmenu', (e) => {
+    if (!e.target.closest('.file-card') && !e.target.closest('#fileList')) {
+      hideFileOverviewMenu();
+    }
+  });
+
+  // Правый клик по пустому месту File overview — только «Вставить»
+  fileList.addEventListener('contextmenu', (e) => {
+    if (!e.target.closest('.file-card')) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (currentProject && currentProject.path) {
+        showFileOverviewMenu(e, null);
+      }
+    }
+  });
+
+  // --- Иконки File overview: Вырезать / Копировать / Вставить ---
+  document.getElementById('foMenuCopy').addEventListener('click', async () => {
+    const target = foMenuTarget;
+    hideFileOverviewMenu();
+    if (!target || !target.path) return;
+    await copyEntriesToClipboard(
+      [{ path: target.path, name: target.name, isDirectory: false }],
+      'copy'
+    );
+  });
+
+  document.getElementById('foMenuCut').addEventListener('click', async () => {
+    const target = foMenuTarget;
+    hideFileOverviewMenu();
+    if (!target || !target.path) return;
+    await copyEntriesToClipboard(
+      [{ path: target.path, name: target.name, isDirectory: false }],
+      'cut'
+    );
+  });
+
+  document.getElementById('foMenuPaste').addEventListener('click', async () => {
+    hideFileOverviewMenu();
+    // Вставляем в корень проекта
+    await pasteClipboardInto(currentProject ? currentProject.path : null);
+  });
+
+  // --- Переименовать ---
+  document.getElementById('foMenuRename').addEventListener('click', async () => {
+    const target = foMenuTarget;
+    hideFileOverviewMenu();
+    if (!target || !target.path) return;
+
+    const newName = await openRenameModal(target.name, {
+      title: '✏️ Переименовать файл',
+      confirmLabel: 'Переименовать',
+    });
+    if (newName === null) return;
+    if (!newName.trim()) {
+      alert('Имя не может быть пустым');
+      return;
+    }
+    if (newName.trim() === target.name) return; // ничего не менялось
+
+    try {
+      const result = await window.api.renamePath(target.path, newName.trim());
+      if (result.success) {
+        await refreshCurrentProjectFiles();
+      } else {
+        alert(`Ошибка переименования: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`Ошибка: ${error.message}`);
+    }
+  });
+
+  // --- Скопировать путь ---
+  document.getElementById('foMenuCopyPath').addEventListener('click', async () => {
+    const target = foMenuTarget;
+    hideFileOverviewMenu();
+    if (!target || !target.path) return;
+
+    try {
+      await navigator.clipboard.writeText(target.path);
+      showToast(`Скопировано: ${target.path}`);
+    } catch (err) {
+      // Fallback на устаревший execCommand
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = target.path;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast(`Скопировано: ${target.path}`);
+      } catch (fallbackErr) {
+        alert('Не удалось скопировать путь: ' + (fallbackErr.message || fallbackErr));
+      }
+    }
+  });
+
+  // --- Удалить ---
+  document.getElementById('foMenuDelete').addEventListener('click', async () => {
+    const target = foMenuTarget;
+    hideFileOverviewMenu();
+    if (!target || !target.path) return;
+
+    const confirmDelete = confirm(
+      `Удалить файл "${target.name}"?\n\nФайл будет удалён безвозвратно!`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const result = await window.api.deletePath(target.path);
+      if (result.success) {
+        document.querySelectorAll('.file-card').forEach((c) => c.classList.remove('selected'));
+        selectedFile = null;
+        await refreshCurrentProjectFiles();
+      } else {
+        alert(`Ошибка удаления: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`Ошибка: ${error.message}`);
+    }
+  });
 
   let sortOrder = 'name';
   document.getElementById('sortFilesBtn')?.addEventListener('click', () => {

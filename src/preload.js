@@ -94,6 +94,10 @@ contextBridge.exposeInMainWorld('api', {
   renamePath: (oldPath, newName) => ipcRenderer.invoke('rename-path', oldPath, newName),
   createFolder: (parentPath, folderName) =>
     ipcRenderer.invoke('create-folder', parentPath, folderName),
+  // Буфер обмена файлового менеджера: копировать/переместить объект ВНУТРЬ папки.
+  // Имя при конфликте автоматически получает суффикс _1, _2, ...
+  copyInto: (sourcePath, destDir) => ipcRenderer.invoke('copy-into', sourcePath, destDir),
+  moveInto: (sourcePath, destDir) => ipcRenderer.invoke('move-into', sourcePath, destDir),
   // Возвращает реальный путь на диске для File-объекта (drag&drop из проводника).
   // ВАЖНО: webUtils.getPathForFile должен вызываться в renderer-процессе
   // (документированный паттерн Electron) — поэтому вызываем прямо здесь,

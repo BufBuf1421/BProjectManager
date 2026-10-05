@@ -2480,6 +2480,57 @@ input[type="checkbox"]{
   margin: 4px 8px;
 }
 
+/* ===== Строка иконок контекстного меню (стиль Windows 11) ===== */
+/* Верхний ряд кнопок-иконок: Вырезать / Копировать / Вставить */
+.context-menu-icon-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 4px;
+}
+
+.context-menu-icon-btn {
+  width: 36px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.context-menu-icon-btn:hover {
+  background: var(--card-border);
+  color: var(--text-primary);
+}
+
+.context-menu-icon-btn.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.context-menu-icon-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* SVG-иконки слева от текста пунктов меню */
+.context-menu-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.context-menu-item.danger svg {
+  opacity: 1;
+}
+
+
 /* ============================================
    ФОРМАТИРОВАНИЕ ТЕКСТА В ЗАМЕТКАХ
    ============================================ */

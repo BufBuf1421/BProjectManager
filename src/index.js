@@ -1254,6 +1254,114 @@ ipcMain.handle('create-folder', async (_event, parentPath, folderName) => {
   }
 });
 
+// >>> CLIPBOARD-CORE-START
+// ===== БУФЕР ОБМЕНА ФАЙЛОВОГО МЕНЕДЖЕРА: КОПИРОВАНИЕ / ПЕРЕМЕЩЕНИЕ =====
+// Используется пунктами контекстного меню «Копировать» / «Вырезать» / «Вставить»
+// (файловый менеджер и File overview). Renderer запоминает список путей,
+// а вставка выполняется здесь — средствами main-процесса.
+//
+// copyIntoInternal — копирует srcPath ВНУТРЬ destDir (папки — рекурсивно):
+//   * при конфликте имён подбирается свободное имя с суффиксом _1, _2, ...
+//   * копирование в ту же папку даёт имя «<имя> - копия» (как в проводнике Windows)
+//   * папку нельзя копировать в саму себя или внутрь собственной подпапки
+async function copyIntoInternal(srcPath, destDir) {
+  try {
+    if (!srcPath || !destDir) return fail(new Error('Не указан путь копирования'));
+    if (!(await fs.pathExists(srcPath))) {
+      return fail(new Error('Исходный путь не существует'));
+    }
+    if (!(await fs.pathExists(destDir))) {
+      return fail(new Error('Папка назначения не существует'));
+    }
+
+    // Защита от «папка внутрь самой себя»
+    const srcStat = await fs.stat(srcPath);
+    if (srcStat.isDirectory()) {
+      const normSrc = path.resolve(srcPath).toLowerCase();
+      const normDest = path.resolve(destDir).toLowerCase();
+      if (normDest === normSrc || normDest.startsWith(normSrc + path.sep)) {
+        return fail(new Error('Нельзя копировать папку в саму себя'));
+      }
+    }
+
+    const srcName = path.basename(srcPath);
+    const ext = path.extname(srcName);
+    const stem = ext ? srcName.slice(0, srcName.length - ext.length) : srcName;
+    // Копирование в ту же папку — «<имя> - копия», как в Windows
+    const sameDir =
+      path.dirname(path.resolve(srcPath)).toLowerCase() ===
+      path.resolve(destDir).toLowerCase();
+    let baseName = sameDir ? `${stem} - копия${ext}` : srcName;
+
+    // Свободное имя: _1, _2, ...
+    let finalName = baseName;
+    let counter = 1;
+    const baseStem = ext ? baseName.slice(0, baseName.length - ext.length) : baseName;
+    while (await fs.pathExists(path.join(destDir, finalName))) {
+      finalName = `${baseStem}_${counter}${ext}`;
+      counter++;
+    }
+
+    const destPath = path.join(destDir, finalName);
+    await fs.copy(srcPath, destPath);
+    return ok({ path: destPath, name: finalName });
+  } catch (error) {
+    console.error('Ошибка copy-into:', error);
+    return fail(error);
+  }
+}
+
+// moveIntoInternal — перемещает srcPath ВНУТРЬ destDir (режим «Вырезать»):
+//   * перемещение в ту же папку — бездействие (skipped: true)
+//   * при конфликте имён — суффикс _1, _2, ...
+//   * папку нельзя перемещать в саму себя или внутрь собственной подпапки
+async function moveIntoInternal(srcPath, destDir) {
+  try {
+    if (!srcPath || !destDir) return fail(new Error('Не указан путь перемещения'));
+    if (!(await fs.pathExists(srcPath))) {
+      return fail(new Error('Исходный путь не существует'));
+    }
+    if (!(await fs.pathExists(destDir))) {
+      return fail(new Error('Папка назначения не существует'));
+    }
+
+    const normSrc = path.resolve(srcPath).toLowerCase();
+    const normDest = path.resolve(destDir).toLowerCase();
+    // Перемещение в ту же папку — делать нечего
+    if (path.dirname(normSrc) === normDest) {
+      return ok({ skipped: true, path: srcPath, name: path.basename(srcPath) });
+    }
+    // Защита от «папка внутрь самой себя»
+    const srcStat = await fs.stat(srcPath);
+    if (srcStat.isDirectory()) {
+      if (normDest === normSrc || normDest.startsWith(normSrc + path.sep)) {
+        return fail(new Error('Нельзя перемещать папку в саму себя'));
+      }
+    }
+
+    const srcName = path.basename(srcPath);
+    const ext = path.extname(srcName);
+    const stem = ext ? srcName.slice(0, srcName.length - ext.length) : srcName;
+    let finalName = srcName;
+    let counter = 1;
+    while (await fs.pathExists(path.join(destDir, finalName))) {
+      finalName = `${stem}_${counter}${ext}`;
+      counter++;
+    }
+
+    const destPath = path.join(destDir, finalName);
+    await fs.move(srcPath, destPath);
+    return ok({ path: destPath, name: finalName });
+  } catch (error) {
+    console.error('Ошибка move-into:', error);
+    return fail(error);
+  }
+}
+
+ipcMain.handle('copy-into', (_event, srcPath, destDir) => copyIntoInternal(srcPath, destDir));
+ipcMain.handle('move-into', (_event, srcPath, destDir) => moveIntoInternal(srcPath, destDir));
+// >>> CLIPBOARD-CORE-END
+
 ipcMain.handle('get-file-path', async (_event, file) => {
   try {
     if (webUtils?.getPathForFile) {
