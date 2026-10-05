@@ -16,6 +16,7 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
  *   - Файлы и директории
  *   - Запуск приложений
  *   - Диалоги ОС
+ *   - Наблюдение за файловой системой (live-обновление UI)
  *   - Авторизация
  */
 contextBridge.exposeInMainWorld('api', {
@@ -140,6 +141,22 @@ contextBridge.exposeInMainWorld('api', {
   // ===== ДИАЛОГИ ОС =====
   openDirectoryDialog: () => ipcRenderer.invoke('open-directory-dialog'),
   openFileDialog: (filters) => ipcRenderer.invoke('open-file-dialog', filters),
+
+  // ===== НАБЛЮДЕНИЕ ЗА ФАЙЛОВОЙ СИСТЕМОЙ (LIVE-ОБНОВЛЕНИЕ ИНТЕРФЕЙСА) =====
+  // Начать следить за каталогом проектов: изменения папок и файлов проектов
+  // будут приходить через onFsEvent (File overview и файловый менеджер
+  // обновляются без перезагрузки страницы).
+  startWatching: (projectsPath) => ipcRenderer.invoke('watch-projects-root', projectsPath),
+  // Прекратить наблюдение (например, при переключении рабочей области)
+  stopWatching: (projectsPath) => ipcRenderer.invoke('unwatch-projects-root', projectsPath),
+  // Подписка на события изменений.
+  // payload = { root: <наблюдаемый каталог>, projectsChanged: <список проектов
+  // изменился>, projectPaths: [<проекты, в которых изменились файлы>] }
+  onFsEvent: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('fs-event', listener);
+    return () => ipcRenderer.removeListener('fs-event', listener);
+  },
 
   // ===== АВТОРИЗАЦИЯ =====
   authUser: (data) => ipcRenderer.invoke('auth-user', data),

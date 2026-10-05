@@ -11,6 +11,7 @@
 //   - Заметки
 //   - Файлы и директории
 //   - Запуск внешних приложений
+//   - Наблюдение за файловой системой (live-обновление UI)
 //   - Авторизация и задачи Supabase
 
 const { app, BrowserWindow, ipcMain, dialog, shell, webUtils, clipboard } = require('electron');
@@ -2996,6 +2997,316 @@ ipcMain.handle('create-task', async (_event, data) => {
   }
 });
 
+// ===== НАБЛЮДЕНИЕ ЗА ФАЙЛОВОЙ СИСТЕМОЙ (LIVE-ОБНОВЛЕНИЕ ИНТЕРФЕЙСА) =====
+// Следим за каталогом проектов (рекурсивно) и сообщаем renderer'у об изменениях:
+//   - появились/исчезли/переименовались ПАПКИ проектов → renderer перечитывает
+//     список проектов; если удалён выбранный проект — на его месте остаётся
+//     приветственный экран;
+//   - изменились ФАЙЛЫ внутри проекта → renderer обновляет File overview
+//     и файловый менеджер без перезагрузки страницы (F5/Ctrl+R больше не нужны).
+// project.json и временные файлы (~$...) игнорируются: их пишет само приложение,
+// и лишние перерендеры при задачах/заметках/статусах не нужны.
+// На Windows/macOS используется рекурсивный fs.watch; на Linux (recursive не
+// поддерживается) — наблюдение корня и папок проектов первого уровня.
+// События копятся и отправляются пачкой (дебаунс), чтобы Blender/UE5,
+// сохраняющие файл через временные копии, не вызывали лавину перерисовок.
+
+// >>> FS-WATCH-CORE-START (тесты извлекают эту часть)
+
+// В тестах debounce/задержка перезапуска подменяются через global
+// (см. scripts/test_fs_watch.js); в приложении работают значения по умолчанию.
+const FS_WATCH_DEBOUNCE_MS =
+  (typeof global !== 'undefined' && Number(global.__fsWatchDebounceMs)) || 400;
+const FS_WATCH_RESTART_DELAY_MS =
+  (typeof global !== 'undefined' && Number(global.__fsWatchRestartDelayMs)) || 5000;
+const FS_WATCH_MAX_RESTARTS = 12;
+
+// Нормализованный путь корня проектов -> состояние наблюдения
+const fsWatchers = new Map();
+
+/** Нормализует путь корня проектов для ключа наблюдения.
+ *  Корни дисков ('C:\\', '/') не трогаем — срез хвостового разделителя
+ *  превратил бы 'C:\\' в относительный 'C:'. */
+function normalizeWatchRoot(p) {
+  const raw = String(p || '');
+  const norm = path.normalize(raw);
+  if (!norm || norm.length <= 3 || /^[a-zA-Z]:[\\/]?$/.test(norm)) return norm;
+  return norm.replace(/[\\/]+$/, '');
+}
+
+/** Абсолютный ли путь. Учитывает Windows-стиль на любой платформе
+ *  (C:\\..., C:/..., UNC \\\\server\\...) — иначе на Linux-тестах
+ *  и в кросс-платформенных строках isAbsolute() ошибается. */
+function isAbsoluteFsPath(p) {
+  if (!p) return false;
+  const s = String(p);
+  if (path.isAbsolute(s)) return true;
+  return /^[a-zA-Z]:[\\/]/.test(s) || /^\\\\[^\\]/.test(s);
+}
+
+/** Файлы, на которые интерфейс реагировать не должен:
+ *  project.json пишется самим приложением (задачи/заметки/статусы/восстановление),
+ *  '~$...' — временные файлы Office и некоторых других программ. */
+function isWatchNoiseFileName(name) {
+  if (!name) return false;
+  const base = path.basename(String(name));
+  if (base === 'project.json') return true;
+  if (base.startsWith('~')) return true;
+  return false;
+}
+
+/** Помечает «грязную» область и планирует отправку событий (с дебаунсом).
+ *  scope: { kind: 'root' } — изменилось содержимое корня проектов (список
+ *  проектов), либо { kind: 'project', projectPath } — изменились файлы проекта. */
+function markFsEvent(rootKey, scope, fileName) {
+  const state = fsWatchers.get(rootKey);
+  if (!state) return;
+  if (fileName && isWatchNoiseFileName(fileName)) return;
+
+  if (scope && scope.kind === 'project' && scope.projectPath) {
+    state.projects.add(scope.projectPath);
+  } else {
+    state.rootDirty = true;
+  }
+
+  if (state.timer) clearTimeout(state.timer);
+  state.timer = setTimeout(() => flushFsEvents(rootKey), FS_WATCH_DEBOUNCE_MS);
+}
+
+/** Отправляет накопленные события в renderer (одним сообщением на окно). */
+function flushFsEvents(rootKey) {
+  const state = fsWatchers.get(rootKey);
+  if (!state) return;
+  state.timer = null;
+
+  const projectsChanged = state.rootDirty;
+  const projectPaths = Array.from(state.projects);
+  state.rootDirty = false;
+  state.projects.clear();
+
+  if (!projectsChanged && projectPaths.length === 0) return;
+
+  const payload = { root: rootKey, projectsChanged, projectPaths };
+  for (const win of BrowserWindow.getAllWindows()) {
+    try {
+      win.webContents.send('fs-event', payload);
+    } catch {
+      // окно уже закрывается — пропускаем
+    }
+  }
+}
+
+/** Разбор события рекурсивного watch'ера.
+ *  Windows: fileName — полный путь; macOS: относительный (может с '/');
+ *  Linux: просто имя файла. Все варианты сводим к одному виду. */
+function onRecursiveFsChange(rootKey, fileName) {
+  if (!fileName) {
+    markFsEvent(rootKey, { kind: 'root' });
+    return;
+  }
+  const name = String(fileName);
+  if (isWatchNoiseFileName(name)) return;
+
+  let rel;
+  if (isAbsoluteFsPath(name)) {
+    rel = path.relative(rootKey, name);
+  } else {
+    rel = name.split('/').join(path.sep);
+  }
+
+  if (!rel || rel.startsWith('..') || isAbsoluteFsPath(rel)) {
+    // событие вне наблюдаемого корня — считаем изменением корня
+    markFsEvent(rootKey, { kind: 'root' });
+    return;
+  }
+
+  const parts = rel.split(path.sep).filter(Boolean);
+  if (parts.length <= 1) {
+    // Непосредственный ребёнок корня: папка проекта добавлена/удалена/переименована
+    markFsEvent(rootKey, { kind: 'root' });
+    return;
+  }
+
+  // project.json меняет само приложение — файловые списки от него не зависят
+  if (parts.length === 2 && parts[1] === 'project.json') return;
+
+  markFsEvent(rootKey, { kind: 'project', projectPath: path.join(rootKey, parts[0]) });
+}
+
+/** Закрывает все watch'еры состояния и сбрасывает накопленные события. */
+function closeFsWatchState(state) {
+  for (const w of state.watchers) {
+    try {
+      w.close();
+    } catch {
+      // уже закрыт
+    }
+  }
+  state.watchers = [];
+  if (state.timer) {
+    clearTimeout(state.timer);
+    state.timer = null;
+  }
+}
+
+/** Подключает watch'еры к корню проектов. Возвращает true, если удалось
+ *  подключить хотя бы один. */
+function attachFsWatchers(rootKey, state) {
+  let recursiveWatcher = null;
+  try {
+    recursiveWatcher = fs.watch(rootKey, { recursive: true, persistent: false });
+  } catch {
+    // Linux: ERR_FEATURE_UNAVAILABLE_ON_PLATFORM — рекурсия не поддерживается
+    recursiveWatcher = null;
+  }
+
+  if (recursiveWatcher) {
+    recursiveWatcher.on('change', (_eventType, fileName) => {
+      onRecursiveFsChange(rootKey, fileName);
+    });
+    recursiveWatcher.on('error', () => scheduleFsWatchRestart(rootKey));
+    state.watchers.push(recursiveWatcher);
+    return true;
+  }
+
+  // ---- Fallback без рекурсии (Linux): корень + папки проектов 1-го уровня ----
+  try {
+    const rootWatcher = fs.watch(rootKey, { persistent: false });
+    rootWatcher.on('change', (_e, fileName) => {
+      markFsEvent(rootKey, { kind: 'root' }, fileName);
+    });
+    rootWatcher.on('error', () => scheduleFsWatchRestart(rootKey));
+    state.watchers.push(rootWatcher);
+  } catch {
+    // корень мог исчезнуть между pathExists и watch
+  }
+
+  let entries = [];
+  try {
+    entries = fs.readdirSync(rootKey, { withFileTypes: true });
+  } catch {
+    return state.watchers.length > 0;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name.startsWith('.') || entry.name.startsWith('$')) continue;
+    const projectPath = path.join(rootKey, entry.name);
+    try {
+      const w = fs.watch(projectPath, { persistent: false });
+      w.on('change', (_e, fileName) => {
+        markFsEvent(rootKey, { kind: 'project', projectPath }, fileName);
+      });
+      w.on('error', () => {
+        // отдельная папка проекта исчезла — не критично для остальных
+      });
+      state.watchers.push(w);
+    } catch {
+      // папка исчезла между readdir и watch
+    }
+  }
+
+  return state.watchers.length > 0;
+}
+
+/** Перезапуск наблюдения после ошибки watch'ера (например, корень был удалён
+ *  или недоступен). Интерфейсу сразу уходит событие, чтобы он перечитал список. */
+function scheduleFsWatchRestart(rootKey) {
+  const state = fsWatchers.get(rootKey);
+  if (!state) return;
+  closeFsWatchState(state);
+  state.rootDirty = true;
+  flushFsEvents(rootKey);
+
+  if (state.restartTimer) return; // перезапуск уже запланирован
+  if (state.restarts >= FS_WATCH_MAX_RESTARTS) return;
+  state.restarts += 1;
+
+  state.restartTimer = setTimeout(async () => {
+    const st = fsWatchers.get(rootKey);
+    if (!st) return;
+    st.restartTimer = null;
+    const exists = await fs
+      .pathExists(rootKey)
+      .catch(() => false);
+    if (!exists) {
+      scheduleFsWatchRestart(rootKey); // попробуем позже
+      return;
+    }
+    st.watchers = [];
+    if (attachFsWatchers(rootKey, st)) {
+      st.restarts = 0; // успешное подключение — сбрасываем счётчик
+    }
+  }, FS_WATCH_RESTART_DELAY_MS);
+}
+
+/** Включает наблюдение за каталогом проектов (идемпотентно). */
+async function startFsWatchInternal(projectsPath) {
+  if (!projectsPath || typeof projectsPath !== 'string') {
+    return fail(new Error('Путь к проектам не указан'));
+  }
+  const rootKey = normalizeWatchRoot(projectsPath);
+  if (!rootKey) {
+    return fail(new Error('Путь к проектам не указан'));
+  }
+  if (!(await fs.pathExists(rootKey))) {
+    return fail(new Error('Каталог проектов не существует: ' + projectsPath));
+  }
+  if (fsWatchers.has(rootKey)) {
+    return ok({ already: true });
+  }
+
+  const state = {
+    watchers: [],
+    timer: null,
+    restartTimer: null,
+    restarts: 0,
+    rootDirty: false,
+    projects: new Set(),
+  };
+  fsWatchers.set(rootKey, state);
+
+  const attached = attachFsWatchers(rootKey, state);
+  if (!attached) {
+    fsWatchers.delete(rootKey);
+    return fail(new Error('Не удалось наблюдать за каталогом: ' + projectsPath));
+  }
+  return ok();
+}
+
+/** Выключает наблюдение за каталогом проектов (например, при переключении
+ *  рабочей области). */
+function stopFsWatchInternal(projectsPath) {
+  const rootKey = normalizeWatchRoot(projectsPath);
+  const state = fsWatchers.get(rootKey);
+  if (!state) return ok();
+  closeFsWatchState(state);
+  if (state.restartTimer) {
+    clearTimeout(state.restartTimer);
+    state.restartTimer = null;
+  }
+  fsWatchers.delete(rootKey);
+  return ok();
+}
+
+// >>> FS-WATCH-CORE-END
+
+ipcMain.handle('watch-projects-root', async (_event, projectsPath) => {
+  try {
+    return await startFsWatchInternal(projectsPath);
+  } catch (error) {
+    return fail(error);
+  }
+});
+
+ipcMain.handle('unwatch-projects-root', (_event, projectsPath) => {
+  try {
+    return stopFsWatchInternal(projectsPath);
+  } catch (error) {
+    return fail(error);
+  }
+});
+
 // ===== ЖИЗНЕННЫЙ ЦИКЛ ПРИЛОЖЕНИЯ =====
 app.whenReady().then(() => {
   createWindow();
@@ -3008,6 +3319,17 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+// Останавливаем все наблюдения за файловой системой при выходе
+app.on('will-quit', () => {
+  for (const rootKey of Array.from(fsWatchers.keys())) {
+    try {
+      stopFsWatchInternal(rootKey);
+    } catch {
+      // приложение завершается — игнорируем
+    }
   }
 });
 

@@ -282,6 +282,8 @@ function selectWorkspace(id) {
   const workspace = workspaces.find(w => w.id === id);
   if (workspace) {
     settings.projectsPath = workspace.path;
+    // Переносим наблюдение за файловой системой на новый каталог проектов
+    startWatchingProjects();
     // Обновляем классы вкладок
     document.querySelectorAll('.workspace-tab').forEach(el => {
       const wid = parseInt(el.dataset.workspaceId);
@@ -1000,12 +1002,15 @@ document.getElementById('menuDelete').addEventListener('click', async () => {
     if (result.success) {
       const index = projects.findIndex(p => p.id === target.id);
       if (index !== -1) {
+        const wasSelected = selectedProjectId === target.id;
         projects.splice(index, 1);
-        if (selectedProjectId === target.id) {
-          selectedProjectId = null;
-          projectNameEl.textContent = 'Нет проектов';
-        }
+        // Сначала перерисовываем список (карточка исчезает),
+        // затем, если удалили ВЫБРАННЫЙ проект, — показываем приветственный
+        // экран вместо «мёртвого» центрального блока.
         applyFiltersAndSearch();
+        if (wasSelected) {
+          selectProject(null);
+        }
       }
     } else {
       alert(`Ошибка: ${result.error}`);
@@ -1339,6 +1344,10 @@ async function loadData() {
       
       saveWorkspaces();
     }
+
+    // Включаем наблюдение за каталогом проектов: fs-события будут
+    // автоматически обновлять список проектов, File overview и файловый менеджер
+    startWatchingProjects();
 
     await loadProjects();
 
@@ -2841,7 +2850,6 @@ function selectProject(projectId) {
         } catch (error) {
           alert(`Ошибка: ${error.message}`);
         }
-        showToast(`${app.name} запускается`);
       });
 
       // Правый клик — контекстное меню (действия скрипта + управление ярлыком)
@@ -4605,7 +4613,6 @@ function showToast(message, duration = 2000) {
 
     card.addEventListener('dblclick', async () => {
       const project = projects.find((p) => p.id === selectedProjectId);
-      showToast(`${file.name} открывается`);
       if (!project) return;
 
       // 1) Ассоциация расширения с пользовательским приложением — приоритет
@@ -5338,6 +5345,172 @@ renameProjectInput.addEventListener('keydown', (e) => { // ← исправле�
 renameModal.addEventListener('click', (e) => {
   if (e.target === renameModal) closeRenameModal();
 });
+
+  // ===== LIVE-ОБНОВЛЕНИЕ ИНТЕРФЕЙСА (НАБЛЮДЕНИЕ ЗА ФАЙЛАМИ) =====
+  // Главный процесс следит за каталогом проектов (рекурсивно) и присылает
+  // события fs-event: { root, projectsChanged, projectPaths: [...] }.
+  //   - projectsChanged — изменился список проектов (папка добавлена/удалена);
+  //   - projectPaths — в этих проектах изменились файлы.
+  // Благодаря этому File overview и файловый менеджер обновляются сами
+  // (без F5/Ctrl+R), а удалённый — извне или из приложения — выбранный проект
+  // сменяется приветственным экраном.
+  // project.json и временные файлы главный процесс отфильтровывает сам.
+
+  let watchingRoot = null;
+  let projectsRefreshTimer = null;
+  let filesRefreshTimer = null;
+
+  /** Сравнение путей без учёта регистра, разделителей и хвостового слэша. */
+  function samePath(a, b) {
+    const norm = (p) => String(p || '').replace(/[\\/]+$/, '').toLowerCase();
+    return norm(a) === norm(b);
+  }
+
+  /** true, если child === parent или child лежит внутри parent. */
+  function isSubPath(child, parent) {
+    const c = String(child || '').replace(/[\\/]+$/, '').toLowerCase();
+    const p = String(parent || '').replace(/[\\/]+$/, '').toLowerCase();
+    return c === p || c.startsWith(p + '\\') || c.startsWith(p + '/');
+  }
+
+  /** Родительский путь (без хвостового разделителя). null для корня диска. */
+  function parentPathOf(p) {
+    const norm = String(p || '').replace(/[\\/]+$/, '');
+    const idx = Math.max(norm.lastIndexOf('\\'), norm.lastIndexOf('/'));
+    return idx > 0 ? norm.slice(0, idx) : null;
+  }
+
+  /** Включает наблюдение за текущим каталогом проектов. При переключении
+   *  рабочей области наблюдение автоматически переезжает на новый каталог. */
+  function startWatchingProjects() {
+    const root = settings && settings.projectsPath;
+    if (!root || !window.api.startWatching) return;
+    if (watchingRoot) {
+      if (samePath(watchingRoot, root)) return; // уже наблюдаем этот каталог
+      window.api.stopWatching(watchingRoot).catch(() => {});
+    }
+    watchingRoot = root;
+    window.api.startWatching(root).catch((err) => {
+      console.warn('Не удалось включить наблюдение за папкой проектов:', err);
+    });
+  }
+
+  function stopWatchingProjects() {
+    if (!watchingRoot) return;
+    window.api.stopWatching(watchingRoot).catch(() => {});
+    watchingRoot = null;
+  }
+
+  /** Обновление списка проектов БЕЗ сброса выбора/фильтров/сортировки
+   *  (в отличие от loadProjects, который всё обнуляет и дергает Supabase). */
+  async function refreshProjectsList() {
+    if (!settings || !settings.projectsPath) return;
+    try {
+      const result = await window.api.getProjects(settings.projectsPath);
+      if (!result.success) {
+        // Каталог проектов удалён или стал недоступен
+        projects = [];
+        applyFiltersAndSearch();
+        if (selectedProjectId) selectProject(null);
+        return;
+      }
+
+      projects = result.projects;
+      loadPreviewsForProjects(projects); // фоном, без ожидания
+      applyFiltersAndSearch();
+
+      if (selectedProjectId) {
+        const stillExists = projects.some((p) => p.id === selectedProjectId);
+        if (!stillExists) {
+          // Выбранный проект удалён (извне или из приложения) —
+          // приветственный экран вместо устаревшего центрального блока
+          showToast('Проект удалён', 2500);
+          selectProject(null);
+          return;
+        }
+        // Обновляем объект выбранного проекта актуальными данными
+        currentProject = projects.find((p) => p.id === selectedProjectId) || null;
+      }
+    } catch (error) {
+      console.error('Ошибка обновления списка проектов:', error);
+    }
+  }
+
+  /** Обновление File overview и файлового менеджера выбранного проекта.
+   *  Если текущая папка менеджера удалена — поднимаемся к ближайшей
+   *  существующей родительской папке внутри проекта. */
+  async function refreshCurrentProjectFiles() {
+    const project = currentProject;
+    if (!project) return;
+
+    // Проект мог исчезнуть целиком (список ещё не успел обновиться)
+    if (!projects.some((p) => p.id === project.id)) {
+      selectProject(null);
+      return;
+    }
+
+    // 1. File overview (раздел данных проекта: .blend/.spp + ассоциированные)
+    await loadProjectFiles(project.path);
+
+    // 2. Файловый менеджер: обновляем ТЕКУЩУЮ папку, без записи в историю.
+    //    Если она удалена — поднимаемся вверх до существующей папки проекта.
+    let dir = currentPath || project.path;
+    if (!isSubPath(dir, project.path)) dir = project.path;
+
+    let guard = 0;
+    while (guard++ < 40) {
+      try {
+        const check = await window.api.fileExists(dir);
+        if (check && check.exists) break;
+      } catch {
+        // считаем папку несуществующей
+      }
+      if (samePath(dir, project.path)) break; // сам проект исчез — это обработает projects-событие
+      const parent = parentPathOf(dir);
+      if (!parent || samePath(parent, dir) || !isSubPath(parent, project.path)) {
+        dir = project.path;
+        break;
+      }
+      dir = parent;
+    }
+
+    if (dir) await loadDirectory(dir, false);
+  }
+
+  function queueProjectsRefresh() {
+    if (projectsRefreshTimer) clearTimeout(projectsRefreshTimer);
+    projectsRefreshTimer = setTimeout(() => {
+      projectsRefreshTimer = null;
+      refreshProjectsList();
+    }, 150);
+  }
+
+  function queueFilesRefresh() {
+    if (filesRefreshTimer) clearTimeout(filesRefreshTimer);
+    filesRefreshTimer = setTimeout(() => {
+      filesRefreshTimer = null;
+      refreshCurrentProjectFiles();
+    }, 250);
+  }
+
+  /** Точка входа событий от главного процесса. */
+  function handleFsEvent(payload) {
+    if (!payload || !payload.root) return;
+    // Интересуют только события текущей рабочей области
+    if (!settings || !settings.projectsPath) return;
+    if (!samePath(payload.root, settings.projectsPath)) return;
+
+    if (payload.projectsChanged) queueProjectsRefresh();
+
+    const changedPaths = Array.isArray(payload.projectPaths) ? payload.projectPaths : [];
+    if (currentProject && changedPaths.some((p) => samePath(p, currentProject.path))) {
+      queueFilesRefresh();
+    }
+  }
+
+  if (window.api.onFsEvent) {
+    window.api.onFsEvent(handleFsEvent);
+  }
 
   // ===== ИНИЦИАЛИЗАЦИЯ =====
   await loadData();
