@@ -3944,7 +3944,8 @@ async function copyFilesToFolder(files, targetPath) {
   }
 
   if (copiedCount > 0) {
-    alert(`✅ Скопировано файлов: ${copiedCount}${errorCount > 0 ? `, ошибок: ${errorCount}` : ''}`);
+    //alert(`✅ Скопировано файлов: ${copiedCount}${errorCount > 0 ? `, ошибок: ${errorCount}` : ''}`);
+    showToast(`✅ Скопировано файлов: ${copiedCount}${errorCount > 0 ? `, ошибок: ${errorCount}` : ''}`);
     await loadDirectory(currentPath, false);
   } else if (errorCount > 0) {
     alert(`❌ Ошибка копирования: ${errorCount} файлов`);
@@ -4903,6 +4904,7 @@ function showToast(message, duration = 2000) {
 
     card.addEventListener('dblclick', async () => {
       const project = projects.find((p) => p.id === selectedProjectId);
+
       if (!project) return;
 
       // 1) Ассоциация расширения с пользовательским приложением — приоритет
@@ -4942,6 +4944,7 @@ function showToast(message, duration = 2000) {
       } catch (error) {
         alert(`Ошибка: ${error.message}`);
       }
+      showToast(`${file.name} открывается`);
     });
 
     return card;
